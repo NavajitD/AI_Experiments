@@ -1,5 +1,15 @@
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
+import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+import calendar
+import json
+import time
+import numpy as np
+import gspread
+from google.oauth2 import service_account
+from gspread_dataframe import set_with_dataframe
 
 # Set the API key directly in the script
 if "GOOGLE_API_KEY" not in os.environ:
@@ -17,13 +27,82 @@ Model_Gemini = ChatGoogleGenerativeAI(
     google_api_key=api_key
 )
 
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
-import calendar
-import json
-import time
-import numpy as np
+# Function to connect to Google Sheets
+def connect_to_gsheets():
+    # Create a connection object
+    try:
+        # Either load credentials from secrets or from a JSON file
+        if 'gcp_service_account' in st.secrets:
+            credentials = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"],
+                scopes=["https://www.googleapis.com/auth/spreadsheets", 
+                        "https://www.googleapis.com/auth/drive"]
+            )
+        else:
+            # Path to your service account JSON file
+            # You'll need to create this file and put it in the same directory as your script
+            credentials_path = "service_account_credentials.json"
+            
+            if not os.path.exists(credentials_path):
+                st.error("Service account credentials file not found. Please see the sidebar for setup instructions.")
+                return None
+                
+            credentials = service_account.Credentials.from_service_account_file(
+                credentials_path,
+                scopes=["https://www.googleapis.com/auth/spreadsheets", 
+                        "https://www.googleapis.com/auth/drive"]
+            )
+        
+        # Authenticate and create the client
+        client = gspread.authorize(credentials)
+        return client
+    except Exception as e:
+        st.error(f"Error connecting to Google Sheets: {str(e)}")
+        return None
+
+# Function to add data to Google Sheets
+def add_to_gsheets(data):
+    # Google Sheet URL or ID
+    sheet_url = "https://docs.google.com/spreadsheets/d/1OLLl7WZzuqiKCEvQYhLs2YrONcvEszolbSQK4t2HJLc/edit?usp=sharing"
+    sheet_id = sheet_url.split('/d/')[1].split('/')[0]
+    
+    client = connect_to_gsheets()
+    if client is None:
+        return False, "Failed to connect to Google Sheets. Check your credentials."
+    
+    try:
+        # Open the spreadsheet
+        spreadsheet = client.open_by_key(sheet_id)
+        
+        # Select the first worksheet or create one if it doesn't exist
+        try:
+            worksheet = spreadsheet.worksheet("Expenses")
+        except:
+            worksheet = spreadsheet.add_worksheet(title="Expenses", rows=1000, cols=20)
+        
+        # Get existing data
+        try:
+            existing_data = worksheet.get_all_records()
+            # If it's empty, we need to create headers
+            if not existing_data:
+                headers = list(data.keys())
+                worksheet.append_row(headers)
+        except:
+            # Create headers if there's an error (likely empty sheet)
+            headers = list(data.keys())
+            worksheet.append_row(headers)
+        
+        # Convert data to a list of values in the correct order
+        # First get headers to ensure correct order
+        headers = worksheet.row_values(1)
+        row_values = [data.get(header, "") for header in headers]
+        
+        # Append the data
+        worksheet.append_row(row_values)
+        
+        return True, "Data added to Google Sheets successfully."
+    except Exception as e:
+        return False, f"Error adding data to Google Sheets: {str(e)}"
 
 def predict_category(expense_name):
     """Use Gemini to predict the expense category based on expense name"""
@@ -53,8 +132,8 @@ def predict_category(expense_name):
     """
     
     try:
-        response = Model_Gemini.generate_content(prompt)
-        category = response.text.strip()
+        response = Model_Gemini.invoke(prompt)
+        category = response.content.strip()
         # Ensure the predicted category is in our list
         if category not in expense_categories:
             category = "Miscellaneous"
@@ -239,6 +318,7 @@ with st.form("expense_form"):
     payment_method = st.selectbox("Payment Method", payment_methods)
     
     # Billing cycle for credit card
+    billing_cycle = ""
     if payment_method == "Credit Card":
         billing_cycle = get_billing_cycle(date)
         st.success(f"Billing Cycle: {billing_cycle}")
@@ -250,31 +330,39 @@ with st.form("expense_form"):
     submitted = st.form_submit_button("Save Expense")
     
     if submitted:
-        # In a real app, you would save this data to a database
+        # Format the data
         expense_data = {
             "Expense Name": expense_name,
             "Category": category,
-            "Amount": f"₹{amount:.2f}",
+            "Amount": amount,  # Store as number for calculations
+            "Amount (₹)": f"₹{amount:.2f}",  # Formatted display
             "Date": date.strftime("%Y-%m-%d"),
             "Month": month,
             "Year": year,
             "Payment Method": payment_method,
-            "Shared": shared == "Yes"  # Convert to boolean
+            "Shared": shared == "Yes",  # Convert to boolean
+            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
         if payment_method == "Credit Card":
             expense_data["Billing Cycle"] = billing_cycle
         
-        # Display success message and data
-        st.success("Expense saved successfully!")
-        st.json(expense_data)
-        
-        # In a real app, you would add code here to save to a database
+        # Add to Google Sheets
+        with st.spinner("Saving to Google Sheets..."):
+            success, message = add_to_gsheets(expense_data)
+            
+        if success:
+            st.success("✅ Expense saved successfully to Google Sheets!")
+            st.json(expense_data)
+        else:
+            st.error(f"Failed to save to Google Sheets: {message}")
+            st.info("Here's the data that would have been saved:")
+            st.json(expense_data)
 
 # Add expander with info about the app
 with st.expander("About this app"):
     st.write("""
     This expense tracker uses AI to automatically categorize your expenses.
-    It also calculates credit card billing cycles and provides a beautiful
-    dynamic color-changing background animation.
+    It also calculates credit card billing cycles and saves all data to Google Sheets
+    with a beautiful dynamic color-changing background animation.
     """)
