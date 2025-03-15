@@ -5,7 +5,6 @@ import datetime
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from datetime import datetime
 
 # Set the API key directly in the script
