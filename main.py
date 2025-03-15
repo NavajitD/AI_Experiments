@@ -33,6 +33,7 @@ def connect_to_gsheets():
     try:
         # Either load credentials from secrets or from a JSON file
         if 'gcp_service_account' in st.secrets:
+            st.info("Using credentials from secrets")
             credentials = service_account.Credentials.from_service_account_info(
                 st.secrets["gcp_service_account"],
                 scopes=["https://www.googleapis.com/auth/spreadsheets", 
@@ -43,9 +44,10 @@ def connect_to_gsheets():
             credentials_path = "service_account_credentials.json"
             
             if not os.path.exists(credentials_path):
-                st.error("Service account credentials file not found. Please see the sidebar for setup instructions.")
+                st.error(f"Service account credentials file not found at: {os.path.abspath(credentials_path)}")
                 return None
-                
+            
+            st.info(f"Using credentials from file: {os.path.abspath(credentials_path)}")    
             credentials = service_account.Credentials.from_service_account_file(
                 credentials_path,
                 scopes=["https://www.googleapis.com/auth/spreadsheets", 
@@ -54,9 +56,12 @@ def connect_to_gsheets():
         
         # Authenticate and create the client
         client = gspread.authorize(credentials)
+        st.success("Successfully connected to Google services")
         return client
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {str(e)}")
+        import traceback
+        st.error(traceback.format_exc())
         return None
 
 # Function to add data to Google Sheets - UPDATED SHEET URL
@@ -494,40 +499,10 @@ with st.form("expense_form"):
                 st.markdown("<div class='info-card'>Here's the data that would have been saved:</div>", unsafe_allow_html=True)
                 st.json(expense_data)
 
-# Add sidebar with app info
-with st.sidebar:
-    st.markdown("<div class='section-header'>💫 About</div>", unsafe_allow_html=True)
-    st.markdown("""
-    <div style='color: #d0d0e0;'>
-    This expense tracker features:
-    <ul>
-        <li>🌙 Calming dark mode design</li>
-        <li>🤖 AI-powered expense categorization</li>
-        <li>📊 Google Sheets integration</li>
-        <li>💳 Credit card billing cycle calculation</li>
-        <li>✨ Dynamic background animation</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<div class='section-header'>📊 Recent Stats</div>", unsafe_allow_html=True)
-    
-    # Placeholder for future analytics features
-    st.markdown("""
-    <div style='color: #d0d0e0;'>
-    Analytics features coming soon:
-    <ul>
-        <li>Monthly spending breakdown</li>
-        <li>Category distribution</li>
-        <li>Expense trends</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-
 # Footer with credits
 st.markdown("""
 <div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(100, 149, 237, 0.3); color: #a0a0a0;'>
-    ✨ Powered by AI • Gemini Integration • Dark Mode Design
+    ✨ Powered by AI • Navajit D 2025
 </div>
 """, unsafe_allow_html=True)
 
