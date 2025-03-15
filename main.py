@@ -207,16 +207,16 @@ def main():
 
         # Data preparation
         data = {
-            "expense_name": expense_name,
+            "expenseName": expense_name,
             "category": category,
             "amount": amount,
             "date": date.strftime("%Y-%m-%d"),
             "month": month,
             "year": year,
-            "payment_method": payment_method,
+            "paymentMethod": payment_method,
             "shared": "Yes" if shared else "No",
-            "billing_cycle": billing_cycle,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "billingCycle": billing_cycle,
+            "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
                 
         # Submit button
