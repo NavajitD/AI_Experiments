@@ -54,8 +54,8 @@ def get_category_prediction(expense_name):
         
         Return only the category name, nothing else.
         """
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        response = model.invoke(prompt)
+        return response.content.strip()
     except Exception as e:
         st.error(f"Error with Gemini API: {str(e)}")
         return "Miscellaneous"
