@@ -40,7 +40,6 @@ def connect_to_gsheets():
             )
         else:
             # Path to your service account JSON file
-            # You'll need to create this file and put it in the same directory as your script
             credentials_path = "service_account_credentials.json"
             
             if not os.path.exists(credentials_path):
@@ -60,10 +59,10 @@ def connect_to_gsheets():
         st.error(f"Error connecting to Google Sheets: {str(e)}")
         return None
 
-# Function to add data to Google Sheets
+# Function to add data to Google Sheets - UPDATED SHEET URL
 def add_to_gsheets(data):
-    # Google Sheet URL or ID
-    sheet_url = "https://docs.google.com/spreadsheets/d/1OLLl7WZzuqiKCEvQYhLs2YrONcvEszolbSQK4t2HJLc/edit?usp=sharing"
+    # Updated Google Sheet URL
+    sheet_url = "https://docs.google.com/spreadsheets/d/1ysIiU5zEl2vdA28Drs_jInyH2htWej7XzaxRYWfy1dU/edit?usp=sharing"
     sheet_id = sheet_url.split('/d/')[1].split('/')[0]
     
     client = connect_to_gsheets()
@@ -177,9 +176,8 @@ def get_billing_cycle(date):
         
     return f"{cycle_start.strftime('%b %d')} - {cycle_end.strftime('%b %d')}"
 
-# Create a native Streamlit animation function
-def native_animation():
-    # Create a placeholder for the animation
+# Dark mode animation with calming colors
+def dark_mode_animation():
     animation_placeholder = st.empty()
     
     # Initialize animation state
@@ -191,7 +189,7 @@ def native_animation():
     # Update animation frame
     current_time = time.time()
     if current_time - st.session_state.last_update > 0.1:  # Update every 100ms
-        st.session_state.animation_frame += st.session_state.animation_direction
+        st.session_state.animation_frame += st.session_state.animation_direction * 0.5  # Slower transition
         if st.session_state.animation_frame >= 100:
             st.session_state.animation_direction = -1
         elif st.session_state.animation_frame <= 0:
@@ -200,40 +198,160 @@ def native_animation():
     
     # Calculate animation parameters
     frame = st.session_state.animation_frame / 100
-    hue = (frame * 360) % 360  # Cycle through colors
     
-    # Create a gradient background
+    # Dark mode colors with cool/calm hues (blues, purples)
+    hue1 = 220 + (frame * 40)  # Deep blue to purple range
+    hue2 = 260 + (frame * 20)  # Purple to indigo range
+    
+    # Create a subtle gradient background
     css = f"""
     <style>
     .stApp {{
         background: linear-gradient(
-            {(hue+180) % 360}deg,
-            hsla({hue}, 70%, 90%, 0.8),
-            hsla({(hue+120) % 360}, 70%, 90%, 0.8)
+            135deg,
+            hsla({hue1}, 70%, 10%, 1),
+            hsla({hue2}, 60%, 15%, 1)
         );
-        background-size: 400% 400%;
+        background-size: 300% 300%;
         animation: gradient 15s ease infinite;
     }}
+    
     @keyframes gradient {{
         0% {{ background-position: 0% 50%; }}
         50% {{ background-position: 100% 50%; }}
         100% {{ background-position: 0% 50%; }}
     }}
+    
+    /* Dark mode form styling */
+    div.stTextInput input, div.stNumberInput input, div.stDateInput input, div.stSelectbox, div.stRadio {{
+        background-color: rgba(30, 30, 40, 0.6) !important;
+        color: #e0e0e0 !important;
+        border: 1px solid rgba(80, 100, 175, 0.5) !important;
+        border-radius: 8px !important;
+    }}
+    
+    div.stTextInput input:focus, div.stNumberInput input:focus, div.stDateInput input:focus {{
+        border-color: rgba(100, 149, 237, 0.8) !important;
+        box-shadow: 0 0 10px rgba(100, 149, 237, 0.3) !important;
+    }}
+    
+    /* Glowing text effect for important elements */
+    .glow-text {{
+        color: rgba(150, 200, 255, 0.9);
+        text-shadow: 0 0 10px rgba(150, 180, 255, 0.5);
+    }}
+    
+    /* Buttons styling */
+    .stButton button {{
+        background: linear-gradient(45deg, rgba(60, 80, 160, 0.8), rgba(80, 100, 180, 0.8)) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    .stButton button:hover {{
+        background: linear-gradient(45deg, rgba(80, 100, 180, 0.9), rgba(100, 120, 200, 0.9)) !important;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+        transform: translateY(-2px) !important;
+    }}
+    
+    /* Form container with glassmorphism effect */
+    .form-container {{
+        background-color: rgba(20, 25, 35, 0.7) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+        padding: 20px !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(80, 120, 200, 0.18) !important;
+        margin-bottom: 20px !important;
+    }}
+    
+    /* Info and success boxes */
+    div.stAlert {{
+        background-color: rgba(30, 35, 50, 0.8) !important;
+        border: 1px solid rgba(80, 120, 200, 0.5) !important;
+        color: #e0e0e0 !important;
+    }}
+    
+    /* JSON output styling */
+    div.element-container div.stJson {{
+        background-color: rgba(25, 30, 40, 0.8) !important;
+        border: 1px solid rgba(80, 120, 200, 0.3) !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+    }}
+    
+    /* Date picker styling */
+    div.st-bd, div.st-cs {{
+        background-color: rgba(30, 35, 45, 0.9) !important;
+        color: #e0e0e0 !important;
+    }}
+    
+    /* Custom info cards */
+    .info-card {{
+        background-color: rgba(30, 40, 60, 0.6) !important;
+        border-radius: 8px !important;
+        padding: 10px 15px !important;
+        border-left: 4px solid rgba(100, 149, 237, 0.7) !important;
+        margin-bottom: 12px !important;
+        color: #d0d0e0 !important;
+    }}
+    
+    /* Custom success card */
+    .success-card {{
+        background-color: rgba(20, 40, 30, 0.7) !important;
+        border-radius: 8px !important;
+        padding: 15px !important;
+        border-left: 4px solid rgba(80, 220, 100, 0.7) !important;
+        margin: 15px 0 !important;
+        color: #d0e0d0 !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    /* Custom error card */
+    .error-card {{
+        background-color: rgba(40, 20, 20, 0.7) !important;
+        border-radius: 8px !important;
+        padding: 15px !important;
+        border-left: 4px solid rgba(220, 80, 80, 0.7) !important;
+        margin: 15px 0 !important;
+        color: #e0d0d0 !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    /* Custom header styling */
+    .section-header {{
+        color: #a0c4ff !important;
+        margin-bottom: 20px !important;
+        padding-bottom: 10px !important;
+        border-bottom: 1px solid rgba(100, 149, 237, 0.3) !important;
+    }}
     </style>
     """
     
     animation_placeholder.markdown(css, unsafe_allow_html=True)
-    
-    # Return to ensure the function runs in the app flow
-    return None
 
-# Define expense categories
+# Define expense categories with icons
 expense_categories = [
     "Housing", "Utilities", "Groceries", "Dining Out", "Transportation",
     "Healthcare", "Entertainment", "Shopping", "Personal Care", 
     "Education", "Travel", "Gifts & Donations", "Insurance",
     "Investments", "Debt Payments", "Miscellaneous"
 ]
+
+# Category icons mapping (continued)
+category_icons = {
+    "Housing": "🏠", "Utilities": "⚡", "Groceries": "🛒", "Dining Out": "🍽️", 
+    "Transportation": "🚗", "Healthcare": "⚕️", "Entertainment": "🎬", 
+    "Shopping": "🛍️", "Personal Care": "💆", "Education": "📚",
+    "Travel": "✈️", "Gifts & Donations": "🎁", "Insurance": "🔒",
+    "Investments": "📈", "Debt Payments": "💳", "Miscellaneous": "🔄"
+}
 
 # Define payment methods
 payment_methods = [
@@ -249,32 +367,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Run our native animation instead of using streamlit_particles
-native_animation()
-
-# App UI - adding some extra styling to make it stand out from the background
-st.markdown("""
-<style>
-    .main-container {
-        background-color: rgba(255, 255, 255, 0.85);
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .stForm {
-        background-color: rgba(255, 255, 255, 0.95);
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-</style>
-""", unsafe_allow_html=True)
+# Run dark mode animation
+dark_mode_animation()
 
 # App title with a glow effect
 st.markdown("""
-<h1 style='text-align: center; color: #1E3A8A; text-shadow: 0 0 10px rgba(100, 149, 237, 0.5);'>
-    ✨ Expense Tracker
+<h1 style='text-align: center; color: #a0c4ff; text-shadow: 0 0 10px rgba(100, 149, 237, 0.7);'>
+    💰 Dark Mode Expense Tracker
 </h1>
+<p style='text-align: center; color: #d0d0e0;'>Track your expenses with AI-powered categorization</p>
+""", unsafe_allow_html=True)
+
+# Wrapper for the form with custom styling
+st.markdown("""
+<div class="form-container">
+</div>
 """, unsafe_allow_html=True)
 
 with st.form("expense_form"):
@@ -286,18 +393,20 @@ with st.form("expense_form"):
         st.session_state.predicted_category = "Miscellaneous"
     
     # Predict category button
-    predict_button = st.form_submit_button("Predict Category")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        category_index = expense_categories.index(st.session_state.predicted_category) if st.session_state.predicted_category in expense_categories else 0
+        category = st.selectbox("Category", expense_categories, index=category_index, format_func=lambda x: f"{category_icons.get(x, '')} {x}")
     
-    # Update category if button is clicked and expense name is provided
-    if predict_button and expense_name:
-        with st.spinner("Predicting category..."):
-            st.session_state.predicted_category = predict_category(expense_name)
+    with col2:
+        predict_button = st.form_submit_button("🔍 Predict")
+        
+        # Update category if button is clicked and expense name is provided
+        if predict_button and expense_name:
+            with st.spinner("✨ AI predicting category..."):
+                st.session_state.predicted_category = predict_category(expense_name)
     
-    # Category dropdown with predicted value
-    category_index = expense_categories.index(st.session_state.predicted_category) if st.session_state.predicted_category in expense_categories else 0
-    category = st.selectbox("Category", expense_categories, index=category_index)
-    
-    # Amount input with decimal support for paise
+    # Amount input with decimal support
     amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f")
     
     # Date input with current date as default
@@ -310,59 +419,118 @@ with st.form("expense_form"):
     
     col1, col2 = st.columns(2)
     with col1:
-        st.info(f"Month: {month}")
+        st.markdown(f"<div class='info-card'>Month: {month}</div>", unsafe_allow_html=True)
     with col2:
-        st.info(f"Year: {year}")
+        st.markdown(f"<div class='info-card'>Year: {year}</div>", unsafe_allow_html=True)
     
-    # Payment method
-    payment_method = st.selectbox("Payment Method", payment_methods)
+    # Payment method with icons
+    payment_icons = {
+        "Cash": "💵", "Debit Card": "💳", "Credit Card": "💳", 
+        "UPI": "📱", "Net Banking": "🏦", "Mobile Wallet": "📲",
+        "Bank Transfer": "🔄", "Other": "❓"
+    }
+    
+    payment_method = st.selectbox(
+        "Payment Method", 
+        payment_methods,
+        format_func=lambda x: f"{payment_icons.get(x, '')} {x}"
+    )
     
     # Billing cycle for credit card
-    billing_cycle = ""
     if payment_method == "Credit Card":
         billing_cycle = get_billing_cycle(date)
-        st.success(f"Billing Cycle: {billing_cycle}")
+        st.markdown(f"<div class='success-card'>Billing Cycle: {billing_cycle}</div>", unsafe_allow_html=True)
     
-    # Shared expense
-    shared = st.radio("Shared Expense?", ["No", "Yes"], index=0)
+    # Shared expense toggle with better styling
+    shared = st.radio(
+        "Shared Expense?", 
+        ["No", "Yes"], 
+        index=0,
+        horizontal=True
+    )
     
-    # Submit button
-    submitted = st.form_submit_button("Save Expense")
+    # Optional note field
+    note = st.text_area("Note (Optional)", "", height=80)
+    
+    # Submit button with icon
+    submitted = st.form_submit_button("💾 Save Expense")
     
     if submitted:
-        # Format the data
-        expense_data = {
-            "Expense Name": expense_name,
-            "Category": category,
-            "Amount": amount,  # Store as number for calculations
-            "Amount (₹)": f"₹{amount:.2f}",  # Formatted display
-            "Date": date.strftime("%Y-%m-%d"),
-            "Month": month,
-            "Year": year,
-            "Payment Method": payment_method,
-            "Shared": shared == "Yes",  # Convert to boolean
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        
-        if payment_method == "Credit Card":
-            expense_data["Billing Cycle"] = billing_cycle
-        
-        # Add to Google Sheets
-        with st.spinner("Saving to Google Sheets..."):
-            success, message = add_to_gsheets(expense_data)
-            
-        if success:
-            st.success("✅ Expense saved successfully to Google Sheets!")
-            st.json(expense_data)
+        if not expense_name:
+            st.markdown(f"<div class='error-card'>Please enter an expense name</div>", unsafe_allow_html=True)
+        elif amount <= 0:
+            st.markdown(f"<div class='error-card'>Please enter a valid amount</div>", unsafe_allow_html=True)
         else:
-            st.error(f"Failed to save to Google Sheets: {message}")
-            st.info("Here's the data that would have been saved:")
-            st.json(expense_data)
+            # Format the data
+            expense_data = {
+                "Expense Name": expense_name,
+                "Category": category,
+                "Amount": amount,  # Store as number for calculations
+                "Amount (₹)": f"₹{amount:.2f}",  # Formatted display
+                "Date": date.strftime("%Y-%m-%d"),
+                "Month": month,
+                "Year": year,
+                "Payment Method": payment_method,
+                "Shared": shared == "Yes",  # Convert to boolean
+                "Note": note,
+                "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            
+            if payment_method == "Credit Card":
+                expense_data["Billing Cycle"] = billing_cycle
+            
+            # Add to Google Sheets
+            with st.spinner("Saving to Google Sheets..."):
+                success, message = add_to_gsheets(expense_data)
+                
+            if success:
+                st.markdown(f"<div class='success-card'>✅ Expense saved successfully!</div>", unsafe_allow_html=True)
+                # Show the data in a cleaner format
+                st.json(expense_data)
+                # Clear the form
+                st.rerun()
+            else:
+                st.markdown(f"<div class='error-card'>❌ Failed: {message}</div>", unsafe_allow_html=True)
+                st.markdown("<div class='info-card'>Here's the data that would have been saved:</div>", unsafe_allow_html=True)
+                st.json(expense_data)
 
-# Add expander with info about the app
-with st.expander("About this app"):
-    st.write("""
-    This expense tracker uses AI to automatically categorize your expenses.
-    It also calculates credit card billing cycles and saves all data to Google Sheets
-    with a beautiful dynamic color-changing background animation.
-    """)
+# Add sidebar with app info
+with st.sidebar:
+    st.markdown("<div class='section-header'>💫 About</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='color: #d0d0e0;'>
+    This expense tracker features:
+    <ul>
+        <li>🌙 Calming dark mode design</li>
+        <li>🤖 AI-powered expense categorization</li>
+        <li>📊 Google Sheets integration</li>
+        <li>💳 Credit card billing cycle calculation</li>
+        <li>✨ Dynamic background animation</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<div class='section-header'>📊 Recent Stats</div>", unsafe_allow_html=True)
+    
+    # Placeholder for future analytics features
+    st.markdown("""
+    <div style='color: #d0d0e0;'>
+    Analytics features coming soon:
+    <ul>
+        <li>Monthly spending breakdown</li>
+        <li>Category distribution</li>
+        <li>Expense trends</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+# Footer with credits
+st.markdown("""
+<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(100, 149, 237, 0.3); color: #a0a0a0;'>
+    ✨ Powered by AI • Gemini Integration • Dark Mode Design
+</div>
+""", unsafe_allow_html=True)
+
+
+
+    
