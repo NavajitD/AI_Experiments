@@ -1,37 +1,29 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain import LLMChain
-from langchain import PromptTemplate
-
-import streamlit as st
-import os
-
-os.environ['GOOGLE_API_KEY'] = st.secrets['AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc']
-
-# Create prompt template for generating tweets
-
-tweet_template = "Give me {number} tweets on {topic}"
-
-tweet_prompt = PromptTemplate(template = tweet_template, input_variables = ['number', 'topic'])
-
-# Initialize Google's Gemini model
-gemini_model = ChatGoogleGenerativeAI(model = "gemini-1.5-flash-latest")
-
-
-# Create LLM chain using the prompt template and model
-tweet_chain = tweet_prompt | gemini_model
-
-
+from langchain_core.prompts import ChatPromptTemplate
 import streamlit as st
 
 st.header("🐦 Tweet Generator")
-
 st.subheader("Generate tweets using Generative AI 🤖")
 
-topic = st.text_input("Topic")
+# Initialize model securely
+gemini_model = ChatGoogleGenerativeAI(
+    model="gemini-1.5-pro",
+    temperature=0.7,
+    google_api_key=st.secrets["AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"]
+)
 
-number = st.number_input("Number of tweets", min_value = 1, max_value = 10, value = 1, step = 1)
+# Create chat-optimized prompt
+tweet_template = ChatPromptTemplate.from_messages([
+    ("human", "Generate {number} engaging tweets about {topic}")
+])
+
+tweet_chain = tweet_template | gemini_model
+
+# UI Components
+topic = st.text_input("Topic")
+number = st.number_input("Number of tweets", 1, 10)
 
 if st.button("Generate"):
-    tweets = tweet_chain.invoke({"number" : number, "topic" : topic})
-    st.write(tweets.content)
-    
+    response = tweet_chain.invoke({"number": number, "topic": topic})
+    st.write("### Generated Tweets")
+    st.write(response.content)
