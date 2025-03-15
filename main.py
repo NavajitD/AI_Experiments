@@ -31,7 +31,7 @@ if 'category_predicted' not in st.session_state:
 
 
 # Function to get category prediction from Gemini model
-def get_category_prediction(expense_name):
+def get_category_prediction(expense_name, model):
     if not gemini_available:
         return "Miscellaneous"
     
