@@ -31,7 +31,6 @@ def connect_to_gsheets():
     """Connect to Google Sheets with detailed error reporting"""
     try:
         # Print working directory for debugging
-        import os
         st.info(f"Current working directory: {os.getcwd()}")
         
         # Path to service account file
@@ -522,7 +521,3 @@ st.markdown("""
     ✨ Powered by AI • Navajit D 2025
 </div>
 """, unsafe_allow_html=True)
-
-
-
-    
