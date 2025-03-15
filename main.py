@@ -3,7 +3,7 @@ import requests
 import json
 import datetime
 import pandas as pd
-import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from datetime import datetime
