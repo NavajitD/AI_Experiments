@@ -21,9 +21,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import calendar
-import google.generativeai as genai
 import json
-import os
 
 # Try to import streamlit_particles, but provide a fallback if it's not available
 try:
@@ -31,11 +29,6 @@ try:
     particles_available = True
 except ImportError:
     particles_available = False
-
-# Configure your Google API Key (in production, use st.secrets or environment variables)
-# Using a placeholder - replace with your own key or use environment variables
-api_key = st.secrets["GOOGLE_API_KEY"] if "GOOGLE_API_KEY" in st.secrets else os.environ.get("GOOGLE_API_KEY", "YOUR_GOOGLE_API_KEY")
-genai.configure(api_key=api_key)
 
 def predict_category(expense_name):
     """Use Gemini to predict the expense category based on expense name"""
