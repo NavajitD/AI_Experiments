@@ -7,22 +7,6 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import os
 from datetime import datetime
 
-# Set the API key directly in the script
-if "GOOGLE_API_KEY" not in os.environ:
-    os.environ["GOOGLE_API_KEY"] = "AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"  
-
-# Retrieve the API key
-api_key = os.environ.get("GOOGLE_API_KEY")
-
-if not api_key:
-    raise ValueError("GOOGLE_API_KEY is not set")
-
-# Initialize Gemini model
-model = ChatGoogleGenerativeAI(
-    model="gemini-1.5-pro",
-    google_api_key=api_key
-)
-
 # Initialize session state variables if they don't exist
 if 'predicted_category' not in st.session_state:
     st.session_state['predicted_category'] = ""
@@ -31,10 +15,22 @@ if 'category_predicted' not in st.session_state:
 
 
 # Function to get category prediction from Gemini model
-def get_category_prediction(expense_name, model):
-    if not gemini_available:
-        return "Miscellaneous"
+def get_category_prediction(expense_name):
+        # Set the API key directly in the script
+    if "GOOGLE_API_KEY" not in os.environ:
+        os.environ["GOOGLE_API_KEY"] = "AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"  
     
+    # Retrieve the API key
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY is not set")
+    
+    # Initialize Gemini model
+    model = ChatGoogleGenerativeAI(
+        model="gemini-1.5-pro",
+        google_api_key=api_key
+    )
     try:
         prompt = f"""
         Classify the following expense into one of these categories:
