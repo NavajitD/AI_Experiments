@@ -228,11 +228,6 @@ def main():
             elif amount <= 0:
                 st.error("Amount must be greater than 0.")
             else:
-                # Prepare data for submission
-                data = {
-                    # data preparation here
-                }
-                
                 # Submit to Google Apps Script
                 with st.spinner("Adding expense..."):
                     response = submit_to_google_apps_script(data)
@@ -241,7 +236,8 @@ def main():
                         st.success("Expense added successfully!")
                         # Reset form logic here
                     else:
-                        st.error(f"Error: {response['message']}")
+                st.error(f"Error: {response['message']}")
+
 
 
 if __name__ == "__main__":
