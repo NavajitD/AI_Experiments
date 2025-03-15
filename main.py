@@ -21,11 +21,27 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import calendar
-from streamlit_particles import particles
+import google.generativeai as genai
 import json
+import os
+
+# Try to import streamlit_particles, but provide a fallback if it's not available
+try:
+    from streamlit_particles import particles
+    particles_available = True
+except ImportError:
+    particles_available = False
+
+# Configure your Google API Key (in production, use st.secrets or environment variables)
+# Using a placeholder - replace with your own key or use environment variables
+api_key = st.secrets["GOOGLE_API_KEY"] if "GOOGLE_API_KEY" in st.secrets else os.environ.get("GOOGLE_API_KEY", "YOUR_GOOGLE_API_KEY")
+genai.configure(api_key=api_key)
 
 def predict_category(expense_name):
     """Use Gemini to predict the expense category based on expense name"""
+    if not Model_Gemini:
+        return "Miscellaneous"
+        
     prompt = f"""
     Given the expense name '{expense_name}', classify it into one of the following categories:
     - Housing (rent, mortgage, maintenance)
@@ -61,26 +77,36 @@ def predict_category(expense_name):
 
 def get_billing_cycle(date):
     """Determine credit card billing cycle based on date"""
+    # Convert to datetime if it's a date object
+    if not isinstance(date, datetime):
+        date = datetime.combine(date, datetime.min.time())
+        
     if date.day < 16:
         # Previous billing cycle
-        prev_month_end = date.replace(day=25)
+        # Handle month rollover properly
         if date.month == 1:  # January
-            prev_month_start = prev_month_end.replace(month=12, year=date.year-1)
+            prev_month = 12
+            prev_year = date.year - 1
         else:
-            prev_month_start = prev_month_end.replace(month=date.month-1)
-        
-        cycle_start = prev_month_start
-        cycle_end = prev_month_end
+            prev_month = date.month - 1
+            prev_year = date.year
+            
+        # Create start and end dates
+        cycle_start = datetime(prev_year, prev_month, 25)
+        cycle_end = datetime(date.year, date.month, 25)
     else:
         # Next billing cycle
-        current_month_start = date.replace(day=25)
+        # Handle month rollover properly
         if date.month == 12:  # December
-            next_month_end = current_month_start.replace(month=1, year=date.year+1)
+            next_month = 1
+            next_year = date.year + 1
         else:
-            next_month_end = current_month_start.replace(month=date.month+1)
-        
-        cycle_start = current_month_start
-        cycle_end = next_month_end
+            next_month = date.month + 1
+            next_year = date.year
+            
+        # Create start and end dates
+        cycle_start = datetime(date.year, date.month, 25)
+        cycle_end = datetime(next_year, next_month, 25)
         
     return f"{cycle_start.strftime('%b %d')} - {cycle_end.strftime('%b %d')}"
 
@@ -106,81 +132,83 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Particle animation configuration
-particle_options = {
-    "particles": {
-        "number": {
-            "value": 80,
-            "density": {
-                "enable": True,
-                "value_area": 800
-            }
-        },
-        "color": {
-            "value": "#ffffff"
-        },
-        "shape": {
-            "type": "circle",
-            "stroke": {
-                "width": 0,
-                "color": "#000000"
-            },
-        },
-        "opacity": {
-            "value": 0.5,
-            "random": True,
-        },
-        "size": {
-            "value": 3,
-            "random": True,
-        },
-        "line_linked": {
-            "enable": True,
-            "distance": 150,
-            "color": "#ffffff",
-            "opacity": 0.4,
-            "width": 1
-        },
-        "move": {
-            "enable": True,
-            "speed": 2,
-            "direction": "none",
-            "random": True,
-            "straight": False,
-            "out_mode": "out",
-            "bounce": False,
-        }
-    },
-    "interactivity": {
-        "detect_on": "canvas",
-        "events": {
-            "onhover": {
-                "enable": True,
-                "mode": "grab"
-            },
-            "onclick": {
-                "enable": True,
-                "mode": "push"
-            },
-            "resize": True
-        },
-        "modes": {
-            "grab": {
-                "distance": 140,
-                "line_linked": {
-                    "opacity": 1
+# Particle animation configuration (only if library is available)
+if particles_available:
+    particle_options = {
+        "particles": {
+            "number": {
+                "value": 80,
+                "density": {
+                    "enable": True,
+                    "value_area": 800
                 }
             },
-            "push": {
-                "particles_nb": 4
+            "color": {
+                "value": "#ffffff"
             },
-        }
-    },
-    "retina_detect": True
-}
-
-# Run background animation
-particles(particle_options, height="100vh", width="100%")
+            "shape": {
+                "type": "circle",
+                "stroke": {
+                    "width": 0,
+                    "color": "#000000"
+                },
+            },
+            "opacity": {
+                "value": 0.5,
+                "random": True,
+            },
+            "size": {
+                "value": 3,
+                "random": True,
+            },
+            "line_linked": {
+                "enable": True,
+                "distance": 150,
+                "color": "#ffffff",
+                "opacity": 0.4,
+                "width": 1
+            },
+            "move": {
+                "enable": True,
+                "speed": 2,
+                "direction": "none",
+                "random": True,
+                "straight": False,
+                "out_mode": "out",
+                "bounce": False,
+            }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": {
+                "onhover": {
+                    "enable": True,
+                    "mode": "grab"
+                },
+                "onclick": {
+                    "enable": True,
+                    "mode": "push"
+                },
+                "resize": True
+            },
+            "modes": {
+                "grab": {
+                    "distance": 140,
+                    "line_linked": {
+                        "opacity": 1
+                    }
+                },
+                "push": {
+                    "particles_nb": 4
+                },
+            }
+        },
+        "retina_detect": True
+    }
+    # Run background animation
+    particles(particle_options, height="100vh", width="100%")
+else:
+    st.info("Install streamlit_particles for the animated background: `pip install streamlit-particles`")
 
 # App UI
 st.title("✨ Expense Tracker")
@@ -189,23 +217,21 @@ with st.form("expense_form"):
     # Expense name input
     expense_name = st.text_input("Expense Name", key="expense_name")
     
-    # Category prediction button
-    predict_button = st.form_submit_button("Predict Category")
-    
-    # Initialize category
+    # Initialize category if needed
     if 'predicted_category' not in st.session_state:
         st.session_state.predicted_category = "Miscellaneous"
     
-    # Update category if button is clicked or expense name changes
+    # Predict category button
+    predict_button = st.form_submit_button("Predict Category")
+    
+    # Update category if button is clicked and expense name is provided
     if predict_button and expense_name:
-        st.session_state.predicted_category = predict_category(expense_name)
+        with st.spinner("Predicting category..."):
+            st.session_state.predicted_category = predict_category(expense_name)
     
     # Category dropdown with predicted value
-    category = st.selectbox(
-        "Category", 
-        expense_categories, 
-        index=expense_categories.index(st.session_state.predicted_category) if 'predicted_category' in st.session_state else 0
-    )
+    category_index = expense_categories.index(st.session_state.predicted_category) if st.session_state.predicted_category in expense_categories else 0
+    category = st.selectbox("Category", expense_categories, index=category_index)
     
     # Amount input with decimal support for paise
     amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f")
@@ -248,7 +274,7 @@ with st.form("expense_form"):
             "Month": month,
             "Year": year,
             "Payment Method": payment_method,
-            "Shared": shared
+            "Shared": shared == "Yes"  # Convert to boolean
         }
         
         if payment_method == "Credit Card":
@@ -273,8 +299,8 @@ st.sidebar.header("Implementation Notes")
 st.sidebar.info("""
 - The app uses Google's Gemini model to predict expense categories
 - Credit card billing cycles are calculated automatically
-- Uses streamlit_particles for the background animation
+- Uses streamlit_particles for the background animation (if installed)
 - To run this app, you'll need to:
   1. Install required packages: `pip install streamlit pandas google-generativeai streamlit-particles`
-  2. Get a Google API key for Gemini
+  2. Set up a Google API key for Gemini (using st.secrets or environment variables)
 """)
