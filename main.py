@@ -194,11 +194,11 @@ def main():
         
         # Payment method
         payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Cash", "Debit card", "Net Banking"]
-        payment_method = st.selectbox("Payment Method", payment_methods, key="payment_method_input")
+        payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
         
         # Billing cycle (if Credit Card is selected)
         billing_cycle = ""
-        if payment_method == "Credit Card":
+        if payment_method == "Credit card":
             billing_cycle = get_billing_cycle(date)
             st.info(f"Billing Cycle: {billing_cycle}")
 
