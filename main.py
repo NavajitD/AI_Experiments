@@ -1,7 +1,6 @@
 import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 import streamlit as st
-pip install gspread
 import pandas as pd
 from datetime import datetime, timedelta
 import calendar
