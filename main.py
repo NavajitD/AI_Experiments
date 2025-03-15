@@ -51,6 +51,7 @@ def get_category_prediction(expense_name):
         - Services
         - Electricity
         - Internet
+        - Investment
         - Insurance
         - Medical expenses
         - Flights
@@ -171,7 +172,7 @@ def main():
         # All possible categories
         categories = [
             "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
-            "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Insurance", 
+            "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
             "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone"
         ]
         
