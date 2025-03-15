@@ -4,14 +4,28 @@ import json
 import datetime
 import pandas as pd
 import google.generativeai as genai
+import os
+from langchain_google_genai import ChatGoogleGenerativeAI
 from datetime import datetime
 
-# Configure Google Gemini API
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
+# Set the API key directly in the script
+if "GOOGLE_API_KEY" not in os.environ:
+    os.environ["GOOGLE_API_KEY"] = "AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"  
+
+# Retrieve the API key
+api_key = os.environ.get("GOOGLE_API_KEY")
+
+if not api_key:
+    raise ValueError("GOOGLE_API_KEY is not set")
+
+# Initialize Gemini model
+gemini_model = ChatGoogleGenerativeAI(
+    model="gemini-1.5-pro",
+    google_api_key=api_key
+)
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
-    model = genai.GenerativeModel('gemini-pro')
     prompt = f"""
     Classify the following expense into one of these categories:
     - Food
@@ -34,7 +48,7 @@ def get_category_prediction(expense_name):
     
     Return only the category name, nothing else.
     """
-    response = model.generate_content(prompt)
+    response = gemini_model.generate_content(prompt)
     return response.text.strip()
 
 # Function to submit data to Google Apps Script
