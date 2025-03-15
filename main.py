@@ -486,7 +486,6 @@ with st.form("expense_form"):
             expense_data = {
                 "Expense Name": expense_name,
                 "Category": category,
-                "Amount": amount,  # Store as number for calculations
                 "Amount (₹)": f"₹{amount:.2f}",  # Formatted display
                 "Date": date.strftime("%Y-%m-%d"),
                 "Month": month,
