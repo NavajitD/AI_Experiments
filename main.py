@@ -22,13 +22,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import calendar
 import json
-
-# Try to import streamlit_particles, but provide a fallback if it's not available
-try:
-    from streamlit_particles import particles
-    particles_available = True
-except ImportError:
-    particles_available = False
+import time
+import numpy as np
 
 def predict_category(expense_name):
     """Use Gemini to predict the expense category based on expense name"""
@@ -103,6 +98,56 @@ def get_billing_cycle(date):
         
     return f"{cycle_start.strftime('%b %d')} - {cycle_end.strftime('%b %d')}"
 
+# Create a native Streamlit animation function
+def native_animation():
+    # Create a placeholder for the animation
+    animation_placeholder = st.empty()
+    
+    # Initialize animation state
+    if 'animation_frame' not in st.session_state:
+        st.session_state.animation_frame = 0
+        st.session_state.animation_direction = 1
+        st.session_state.last_update = time.time()
+    
+    # Update animation frame
+    current_time = time.time()
+    if current_time - st.session_state.last_update > 0.1:  # Update every 100ms
+        st.session_state.animation_frame += st.session_state.animation_direction
+        if st.session_state.animation_frame >= 100:
+            st.session_state.animation_direction = -1
+        elif st.session_state.animation_frame <= 0:
+            st.session_state.animation_direction = 1
+        st.session_state.last_update = current_time
+    
+    # Calculate animation parameters
+    frame = st.session_state.animation_frame / 100
+    hue = (frame * 360) % 360  # Cycle through colors
+    
+    # Create a gradient background
+    css = f"""
+    <style>
+    .stApp {{
+        background: linear-gradient(
+            {(hue+180) % 360}deg,
+            hsla({hue}, 70%, 90%, 0.8),
+            hsla({(hue+120) % 360}, 70%, 90%, 0.8)
+        );
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+    }}
+    @keyframes gradient {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+    </style>
+    """
+    
+    animation_placeholder.markdown(css, unsafe_allow_html=True)
+    
+    # Return to ensure the function runs in the app flow
+    return None
+
 # Define expense categories
 expense_categories = [
     "Housing", "Utilities", "Groceries", "Dining Out", "Transportation",
@@ -125,86 +170,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Particle animation configuration (only if library is available)
-if particles_available:
-    particle_options = {
-        "particles": {
-            "number": {
-                "value": 80,
-                "density": {
-                    "enable": True,
-                    "value_area": 800
-                }
-            },
-            "color": {
-                "value": "#ffffff"
-            },
-            "shape": {
-                "type": "circle",
-                "stroke": {
-                    "width": 0,
-                    "color": "#000000"
-                },
-            },
-            "opacity": {
-                "value": 0.5,
-                "random": True,
-            },
-            "size": {
-                "value": 3,
-                "random": True,
-            },
-            "line_linked": {
-                "enable": True,
-                "distance": 150,
-                "color": "#ffffff",
-                "opacity": 0.4,
-                "width": 1
-            },
-            "move": {
-                "enable": True,
-                "speed": 2,
-                "direction": "none",
-                "random": True,
-                "straight": False,
-                "out_mode": "out",
-                "bounce": False,
-            }
-        },
-        "interactivity": {
-            "detect_on": "canvas",
-            "events": {
-                "onhover": {
-                    "enable": True,
-                    "mode": "grab"
-                },
-                "onclick": {
-                    "enable": True,
-                    "mode": "push"
-                },
-                "resize": True
-            },
-            "modes": {
-                "grab": {
-                    "distance": 140,
-                    "line_linked": {
-                        "opacity": 1
-                    }
-                },
-                "push": {
-                    "particles_nb": 4
-                },
-            }
-        },
-        "retina_detect": True
-    }
-    # Run background animation
-    particles(particle_options, height="100vh", width="100%")
-else:
-    st.info("Install streamlit_particles for the animated background: `pip install streamlit-particles`")
+# Run our native animation instead of using streamlit_particles
+native_animation()
 
-# App UI
-st.title("✨ Expense Tracker")
+# App UI - adding some extra styling to make it stand out from the background
+st.markdown("""
+<style>
+    .main-container {
+        background-color: rgba(255, 255, 255, 0.85);
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stForm {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# App title with a glow effect
+st.markdown("""
+<h1 style='text-align: center; color: #1E3A8A; text-shadow: 0 0 10px rgba(100, 149, 237, 0.5);'>
+    ✨ Expense Tracker
+</h1>
+""", unsafe_allow_html=True)
 
 with st.form("expense_form"):
     # Expense name input
@@ -284,5 +276,5 @@ with st.expander("About this app"):
     st.write("""
     This expense tracker uses AI to automatically categorize your expenses.
     It also calculates credit card billing cycles and provides a beautiful
-    interactive background animation.
+    dynamic color-changing background animation.
     """)
