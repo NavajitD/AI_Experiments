@@ -188,6 +188,7 @@ def main():
         # Submit button
         submitted = st.form_submit_button("Add Expense")
         
+        # Replace the section where you handle form submission with this:
         if submitted:
             if not expense_name:
                 st.error("Please enter an expense name.")
@@ -213,18 +214,27 @@ def main():
                     
                     if response["status"] == "success":
                         st.success("Expense added successfully!")
-                        # Clear form by forcing a rerun without trying to modify session state directly
-                        # The key method to avoid the error
+                        # Reset form values in session state
                         st.session_state['category_predicted'] = ""
                         st.session_state['predicted_category'] = ""
                         for key in list(st.session_state.keys()):
                             if key.endswith('_input'):
-                                # Remove the widget keys to force them to reset
-                                if key in st.session_state:
-                                    del st.session_state[key]
-                        st.rerun()
+                                # Set default values instead of deleting keys
+                                if key == "expense_name_input":
+                                    st.session_state[key] = ""
+                                elif key == "amount_input":
+                                    st.session_state[key] = 0.0
+                                elif key == "date_input":
+                                    st.session_state[key] = datetime.now().date()
+                                elif key == "payment_method_input":
+                                    st.session_state[key] = "Cash"
+                                elif key == "category_input":
+                                    st.session_state[key] = categories[0]
+                                elif key == "shared_input":
+                                    st.session_state[key] = False
                     else:
                         st.error(f"Error: {response['message']}")
+
 
 if __name__ == "__main__":
     main()
