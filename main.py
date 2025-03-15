@@ -236,8 +236,7 @@ def main():
                         st.success("Expense added successfully!")
                         # Reset form logic here
                     else:
-                st.error(f"Error: {response['message']}")
-
+                        st.error(f"Error: {response['message']}")
 
 
 if __name__ == "__main__":
