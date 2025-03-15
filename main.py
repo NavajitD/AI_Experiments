@@ -63,16 +63,25 @@ def get_category_prediction(expense_name):
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
     # Replace with your deployed Google Apps Script web app URL
-    apps_script_url = "https://script.google.com/macros/s/AKfycbxgFJ7IPoAN2uoOWW8Da6qGMsQ-mhfHvnZYGbfBrfDuuF6rdVEl0Q7NhN_oMaDVfu8Eqw/exec"
+    apps_script_url = "https://script.google.com/macros/s/AKfycbwa57MId0ThsVkK1LsX0yqJsv7I6tROJtB3jpiqRaO5gQIa8Uzk7uD111b-GfyHIZT8PQ/exec"
     
     try:
+        headers = {"Content-Type": "application/json"}
         response = requests.post(
             apps_script_url,
             data=json.dumps(data),
-            headers={"Content-Type": "application/json"}
+            headers=headers
         )
-        return response.json()
+        
+        st.write("Response Status Code:", response.status_code)  # Debug
+        st.write("Response Content:", response.text)  # Debug
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"status": "error", "message": f"HTTP Status: {response.status_code}"}
     except Exception as e:
+        st.write(f"Exception: {str(e)}")  # Debug
         return {"status": "error", "message": str(e)}
 
 # Function to get billing cycle based on date
