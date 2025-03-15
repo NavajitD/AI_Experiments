@@ -216,7 +216,7 @@ def main():
                     "paymentMethod": payment_method,
                     "shared": shared,
                     "billingCycle": billing_cycle,
-                    "timeStamp": datetime.now()
+                    "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
                 
                 # Submit to Google Apps Script
