@@ -214,8 +214,9 @@ def main():
                     "month": month,
                     "year": year,
                     "paymentMethod": payment_method,
+                    "shared": shared,
                     "billingCycle": billing_cycle,
-                    "shared": shared
+                    "timeStamp": datetime.now()
                 }
                 
                 # Submit to Google Apps Script
