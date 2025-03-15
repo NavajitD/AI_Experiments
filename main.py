@@ -286,14 +286,3 @@ with st.expander("About this app"):
     It also calculates credit card billing cycles and provides a beautiful
     interactive background animation.
     """)
-
-# Note about implementation
-st.sidebar.header("Implementation Notes")
-st.sidebar.info("""
-- The app uses Google's Gemini model to predict expense categories
-- Credit card billing cycles are calculated automatically
-- Uses streamlit_particles for the background animation (if installed)
-- To run this app, you'll need to:
-  1. Install required packages: `pip install streamlit pandas google-generativeai streamlit-particles`
-  2. Set up a Google API key for Gemini (using st.secrets or environment variables)
-""")
