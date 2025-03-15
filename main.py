@@ -16,7 +16,7 @@ if 'category_predicted' not in st.session_state:
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
-        # Set the API key directly in the script
+    # Set the API key directly in the script
     if "GOOGLE_API_KEY" not in os.environ:
         os.environ["GOOGLE_API_KEY"] = "AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"  
     
@@ -201,10 +201,24 @@ def main():
         if payment_method == "Credit Card":
             billing_cycle = get_billing_cycle(date)
             st.info(f"Billing Cycle: {billing_cycle}")
-        
+
         # Shared expense
         shared = st.checkbox("Shared expense", value=False, key="shared_input")
-        
+
+        # Data preparation
+        data = {
+            "expense_name": expense_name,
+            "category": category,
+            "amount": amount,
+            "date": date.strftime("%Y-%m-%d"),
+            "month": month,
+            "year": year,
+            "payment_method": payment_method,
+            "shared": "Yes" if shared else "No",
+            "billing_cycle": billing_cycle,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+                
         # Submit button
         submitted = st.form_submit_button("Add expense")
         
