@@ -34,21 +34,31 @@ def get_category_prediction(expense_name):
     try:
         prompt = f"""
         Classify the following expense into one of these categories:
-        - Food
+        - Bike
+        - Auto/Cab
+        - Public transport
         - Groceries
-        - Transportation
-        - Housing
-        - Utilities
-        - Healthcare
-        - Entertainment
-        - Shopping
-        - Personal Care
+        - Eating out
+        - Party
+        - Household supplies
         - Education
-        - Travel
-        - Gifts
-        - Investments
+        - Gift
+        - Cinema
+        - Entertainment
+        - Liquor
+        - Rent/Maintenance
+        - Furniture
+        - Services
+        - Electricity
+        - Internet
         - Insurance
-        - Miscellaneous
+        - Medical expenses
+        - Flights
+        - Travel
+        - Clothes
+        - Games/Sports
+        - Gas
+        - Phone
         
         Expense: {expense_name}
         
@@ -108,7 +118,7 @@ def get_billing_cycle(date_obj):
 def main():
     # Set page config
     st.set_page_config(
-        page_title="Expense Tracker",
+        page_title="Expense tracker",
         page_icon="💰",
         layout="wide"
     )
@@ -137,7 +147,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # App title
-    st.title("Expense Tracker")
+    st.title("Expense tracker")
     
     # Create a form key that will be used to clear the form
     form_key = "expense_form"
@@ -145,7 +155,7 @@ def main():
     # Form to capture expense details
     with st.form(form_key):
         # Expense name
-        expense_name = st.text_input("Expense Name", key="expense_name_input")
+        expense_name = st.text_input("Expense name", key="expense_name_input")
         
         # Category with Gemini prediction
         if expense_name and st.session_state.get('category_predicted') != expense_name:
@@ -160,9 +170,9 @@ def main():
         
         # All possible categories
         categories = [
-            "Food", "Groceries", "Transportation", "Housing", "Utilities",
-            "Healthcare", "Entertainment", "Shopping", "Personal Care",
-            "Education", "Travel", "Gifts", "Investments", "Insurance", "Miscellaneous"
+            "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
+            "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Insurance", 
+            "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone"
         ]
         
         # Default to predicted category if available
@@ -182,7 +192,7 @@ def main():
         year = date.year
         
         # Payment method
-        payment_methods = ["Cash", "UPI", "Debit Card", "Credit Card", "Net Banking", "Other"]
+        payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Cash", "Debit card", "Net Banking"]
         payment_method = st.selectbox("Payment Method", payment_methods, key="payment_method_input")
         
         # Billing cycle (if Credit Card is selected)
@@ -192,13 +202,11 @@ def main():
             st.info(f"Billing Cycle: {billing_cycle}")
         
         # Shared expense
-        shared = st.checkbox("Shared Expense", value=False, key="shared_input")
+        shared = st.checkbox("Shared expense", value=False, key="shared_input")
         
         # Submit button
-        submitted = st.form_submit_button("Add Expense")
+        submitted = st.form_submit_button("Add expense")
         
-        # Replace the section where you handle form submission with this:
-        # Replace the form submission handling section with this:
         if submitted:
             if not expense_name:
                 st.error("Please enter an expense name.")
@@ -207,16 +215,7 @@ def main():
             else:
                 # Prepare data for submission
                 data = {
-                    "expenseName": expense_name,
-                    "category": category,
-                    "amount": amount,
-                    "date": date.strftime("%Y-%m-%d"),
-                    "month": month,
-                    "year": year,
-                    "paymentMethod": payment_method,
-                    "shared": shared,
-                    "billingCycle": billing_cycle,
-                    "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    # data preparation here
                 }
                 
                 # Submit to Google Apps Script
@@ -225,10 +224,7 @@ def main():
                     
                     if response["status"] == "success":
                         st.success("Expense added successfully!")
-                        # Use a flag in session state to indicate form should be reset
-                        st.session_state['form_submitted'] = True
-                        st.session_state['category_predicted'] = ""
-                        st.session_state['predicted_category'] = ""
+                        # Reset form logic here
                     else:
                         st.error(f"Error: {response['message']}")
 
