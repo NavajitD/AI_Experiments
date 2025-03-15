@@ -67,7 +67,7 @@ def get_category_prediction(expense_name):
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
     # Replace with your deployed Google Apps Script web app URL
-    apps_script_url = "YOUR_GOOGLE_APPS_SCRIPT_DEPLOYED_URL"
+    apps_script_url = "https://script.google.com/macros/s/AKfycbxgFJ7IPoAN2uoOWW8Da6qGMsQ-mhfHvnZYGbfBrfDuuF6rdVEl0Q7NhN_oMaDVfu8Eqw/exec"
     
     try:
         response = requests.post(
