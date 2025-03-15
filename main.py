@@ -43,4 +43,19 @@ number = st.number_input("Number of tweets", min_value = 1, max_value = 10, valu
 if st.button("Generate"):
     tweets = tweet_chain.invoke({"number" : number, "topic" : topic})
     st.write(tweets.content)
+
+# File uploader for .docx and .pdf
+uploaded_file = st.file_uploader("Upload a file", type=["docx", "pdf"])
+
+if uploaded_file is not None:
+    # Display file name
+    st.write(f"Uploaded file: {uploaded_file.name}")
+
+    # Read file content
+    if uploaded_file.type == "application/pdf":
+        st.write("This is a PDF file.")
+        # Process PDF content here (e.g., using PyPDF2 or pdfplumber)
+    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        st.write("This is a DOCX file.")
+        # Process DOCX content here (e.g., using python-docx)
     
