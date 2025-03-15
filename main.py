@@ -44,18 +44,31 @@ if st.button("Generate"):
     tweets = tweet_chain.invoke({"number" : number, "topic" : topic})
     st.write(tweets.content)
 
-# File uploader for .docx and .pdf
-uploaded_file = st.file_uploader("Upload a file", type=["docx", "pdf"])
+import streamlit as st
 
+# Create file uploader component
+uploaded_file = st.file_uploader("Choose a file", 
+                                 type=["csv", "txt", "xlsx", "pdf"],  # Specify allowed file types
+                                 accept_multiple_files=False)  # Set to True if you want multiple files
+
+# Check if a file was uploaded
 if uploaded_file is not None:
-    # Display file name
-    st.write(f"Uploaded file: {uploaded_file.name}")
-
-    # Read file content
-    if uploaded_file.type == "application/pdf":
-        st.write("This is a PDF file.")
-        # Process PDF content here (e.g., using PyPDF2 or pdfplumber)
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        st.write("This is a DOCX file.")
-        # Process DOCX content here (e.g., using python-docx)
+    # Display file details
+    file_details = {
+        "Filename": uploaded_file.name,
+        "File type": uploaded_file.type,
+        "File size": f"{uploaded_file.size} bytes"
+    }
+    st.write("### File Details:")
+    st.json(file_details)
     
+    # Read and display file content based on type
+    if uploaded_file.type == "text/plain":
+        # For text files
+        text_data = uploaded_file.read().decode("utf-8")
+        st.text_area("File Content", text_data, height=300)
+    elif uploaded_file.type == "text/csv":
+        # For CSV files
+        import pandas as pd
+        df = pd.read_csv(uploaded_file)
+        st.dataframe(df)
