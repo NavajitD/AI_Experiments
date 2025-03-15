@@ -27,36 +27,53 @@ Model_Gemini = ChatGoogleGenerativeAI(
     google_api_key=api_key
 )
 
-# Function to connect to Google Sheets
 def connect_to_gsheets():
-    # Create a connection object
+    """Connect to Google Sheets with detailed error reporting"""
     try:
-        # Either load credentials from secrets or from a JSON file
-        if 'gcp_service_account' in st.secrets:
-            st.info("Using credentials from secrets")
-            credentials = service_account.Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"],
-                scopes=["https://www.googleapis.com/auth/spreadsheets", 
-                        "https://www.googleapis.com/auth/drive"]
-            )
-        else:
-            # Path to your service account JSON file
-            credentials_path = "service_account_credentials.json"
-            
-            if not os.path.exists(credentials_path):
-                st.error(f"Service account credentials file not found at: {os.path.abspath(credentials_path)}")
-                return None
-            
-            st.info(f"Using credentials from file: {os.path.abspath(credentials_path)}")    
-            credentials = service_account.Credentials.from_service_account_file(
-                credentials_path,
-                scopes=["https://www.googleapis.com/auth/spreadsheets", 
-                        "https://www.googleapis.com/auth/drive"]
-            )
+        # Print working directory for debugging
+        import os
+        st.info(f"Current working directory: {os.getcwd()}")
         
-        # Authenticate and create the client
+        # Path to service account file
+        creds_path = "service_account_credentials.json"
+        
+        # Check if file exists
+        if not os.path.exists(creds_path):
+            st.error(f"Credentials file not found at {os.path.abspath(creds_path)}")
+            st.info("Please make sure your service_account_credentials.json file is in the same directory as this script.")
+            return None
+            
+        st.success(f"Found credentials file at {os.path.abspath(creds_path)}")
+        
+        # Load credentials
+        from google.oauth2 import service_account
+        credentials = service_account.Credentials.from_service_account_file(
+            creds_path,
+            scopes=["https://www.googleapis.com/auth/spreadsheets", 
+                    "https://www.googleapis.com/auth/drive"]
+        )
+        
+        # Show service account email for verification
+        info = json.load(open(creds_path))
+        st.info(f"Using service account: {info.get('client_email')}")
+        st.info("Make sure this email has been given access to your Google Sheet")
+        
+        # Connect to gspread
+        import gspread
         client = gspread.authorize(credentials)
-        st.success("Successfully connected to Google services")
+        
+        # Test connection
+        sheet_url = "https://docs.google.com/spreadsheets/d/1ysIiU5zEl2vdA28Drs_jInyH2htWej7XzaxRYWfy1dU/edit?usp=sharing"
+        sheet_id = sheet_url.split('/d/')[1].split('/')[0]
+        
+        try:
+            # Try to open the spreadsheet
+            spreadsheet = client.open_by_key(sheet_id)
+            st.success(f"Successfully connected to sheet: {spreadsheet.title}")
+        except Exception as sheet_e:
+            st.error(f"Could open the spreadsheet, but got error: {str(sheet_e)}")
+            st.warning("Check that you've shared the sheet with your service account email")
+            
         return client
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {str(e)}")
