@@ -189,6 +189,7 @@ def main():
         submitted = st.form_submit_button("Add Expense")
         
         # Replace the section where you handle form submission with this:
+        # Replace the form submission handling section with this:
         if submitted:
             if not expense_name:
                 st.error("Please enter an expense name.")
@@ -214,24 +215,10 @@ def main():
                     
                     if response["status"] == "success":
                         st.success("Expense added successfully!")
-                        # Reset form values in session state
+                        # Use a flag in session state to indicate form should be reset
+                        st.session_state['form_submitted'] = True
                         st.session_state['category_predicted'] = ""
                         st.session_state['predicted_category'] = ""
-                        for key in list(st.session_state.keys()):
-                            if key.endswith('_input'):
-                                # Set default values instead of deleting keys
-                                if key == "expense_name_input":
-                                    st.session_state[key] = ""
-                                elif key == "amount_input":
-                                    st.session_state[key] = 0.0
-                                elif key == "date_input":
-                                    st.session_state[key] = datetime.now().date()
-                                elif key == "payment_method_input":
-                                    st.session_state[key] = "Cash"
-                                elif key == "category_input":
-                                    st.session_state[key] = categories[0]
-                                elif key == "shared_input":
-                                    st.session_state[key] = False
                     else:
                         st.error(f"Error: {response['message']}")
 
