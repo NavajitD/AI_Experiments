@@ -127,210 +127,287 @@ def create_zen_card(content_function, title=""):
 def main():
     # Set page config
     st.set_page_config(
-        page_title="Zen Expense Tracker",
-        page_icon="💸",
+        page_title="Expense Tracker",
+        page_icon="✦",
         layout="wide"
     )
     
-    # CSS for dark theme design
+    # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
-    @font-face {
-        font-family: 'Sole Sans';
-        src: url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
-        font-weight: 400;
-        font-style: normal;
-    }
-        
-    @font-face {
-        font-family: 'Orbi';
-        src: url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
-        font-weight: 400;
-        font-style: normal;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Hind:wght@300;400;500;600&display=swap');
     
     * {
-        font-family: 'Sole Sans', 'Montserrat', sans-serif;
         transition: all 0.3s ease;
     }
     
     h1, h2, h3, h4, .title-font {
-        font-family: 'Sole Sans', 'Montserrat', sans-serif !important;
-        font-weight: 500 !important;
-        color: #E0E0E0 !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 600 !important;
+        color: #FFFFFF !important;
+        letter-spacing: 0.5px !important;
     }
     
     p, span, div, label, input, select, option {
-        font-family: 'Orbi', 'Montserrat', sans-serif;
+        font-family: 'Hind', sans-serif !important;
+        letter-spacing: 0.2px !important;
     }
     
-    /* Dark theme background */
+    /* Premium blue colors */
+    :root {
+        --royal-blue: #2D5AFE;
+        --royal-blue-light: #5B7FFF;
+        --royal-blue-dark: #1E40AF;
+        --royal-accent: #B69E66;
+        --dark-bg: #121220;
+        --dark-card: #1A1A2E;
+        --text-primary: #FFFFFF;
+        --text-secondary: #B5C9E0;
+    }
+    
+    /* Animated background */
+    @keyframes gradientAnimation {
+        0% {
+            background-position: 0% 50%;
+        }
+        50% {
+            background-position: 100% 50%;
+        }
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+    
     .stApp {
-        background: linear-gradient(135deg, #1E1E2E 0%, #282838 100%);
-        color: #E0E0E0;
+        position: relative;
+        color: var(--text-primary);
+        background: var(--dark-bg);
+        overflow: hidden;
+    }
+    
+    .stApp::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            125deg,
+            rgba(18, 18, 32, 0.98) 0%,
+            rgba(26, 26, 46, 0.98) 25%,
+            rgba(30, 64, 175, 0.02) 50%,
+            rgba(26, 26, 46, 0.98) 75%,
+            rgba(18, 18, 32, 0.98) 100%
+        );
+        background-size: 400% 400%;
+        animation: gradientAnimation 30s ease infinite;
+        z-index: -2;
+    }
+    
+    .stApp::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 20% 20%, rgba(45, 90, 254, 0.08) 0%, transparent 45%),
+            radial-gradient(circle at 80% 80%, rgba(182, 158, 102, 0.08) 0%, transparent 45%);
+        z-index: -1;
     }
     
     /* Zen card effect */
     .zen-card {
-        background: #262636;
+        background: var(--dark-card);
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .zen-card::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(45, 90, 254, 0.3), transparent);
+        z-index: 1;
     }
     
     .zen-card h3 {
-        color: #7ECEFF;
-        font-weight: 500;
-        margin-bottom: 16px;
-        border-bottom: 1px solid rgba(126, 206, 255, 0.2);
+        color: var(--royal-blue-light);
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(45, 90, 254, 0.15);
         padding-bottom: 12px;
+        text-transform: uppercase;
+        font-size: 1.1rem;
     }
     
     /* Glass card effect */
     .glass-card {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(26, 26, 46, 0.7);
         backdrop-filter: blur(10px);
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(45, 90, 254, 0.1);
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        position: relative;
+        overflow: hidden;
     }
     
     /* Form styling */
     .stTextInput input, .stNumberInput input, .stDateInput input, .stSelectbox select {
         border-radius: 8px !important;
-        border: 1px solid rgba(126, 206, 255, 0.2) !important;
-        background: rgba(30, 30, 46, 0.8) !important;
-        padding: 10px 14px !important;
-        color: #E0E0E0 !important;
+        border: 1px solid rgba(45, 90, 254, 0.2) !important;
+        background: rgba(18, 18, 32, 0.7) !important;
+        backdrop-filter: blur(5px) !important;
+        padding: 12px 16px !important;
+        color: var(--text-primary) !important;
         box-shadow: none !important;
+        font-family: 'Hind', sans-serif !important;
     }
     
     .stTextInput input:focus, .stNumberInput input:focus, .stDateInput input:focus, .stSelectbox select:focus {
-        border-color: #7ECEFF !important;
-        box-shadow: 0 0 0 1px rgba(126, 206, 255, 0.3) !important;
+        border-color: var(--royal-blue) !important;
+        box-shadow: 0 0 0 1px rgba(45, 90, 254, 0.2) !important;
     }
     
     /* Button styling */
     .stButton>button {
         border-radius: 8px !important;
-        background: linear-gradient(90deg, #7ECEFF, #FF7EC6) !important;
-        color: #1E1E2E !important;
+        background: var(--royal-blue) !important;
+        color: #FFFFFF !important;
+        font-family: 'Montserrat', sans-serif !important;
         font-weight: 600 !important;
-        padding: 10px 20px !important;
+        padding: 12px 24px !important;
         border: none !important;
-        box-shadow: 0 2px 8px rgba(126, 206, 255, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(45, 90, 254, 0.3) !important;
         transition: all 0.3s ease !important;
+        position: relative !important;
+        overflow: hidden !important;
+        letter-spacing: 0.5px !important;
+        text-transform: uppercase !important;
+        font-size: 14px !important;
     }
     
     .stButton>button:hover {
+        background: var(--royal-blue-light) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(126, 206, 255, 0.4) !important;
+        box-shadow: 0 6px 16px rgba(45, 90, 254, 0.4) !important;
     }
     
     /* Custom labels */
     label {
-        color: #A5BCCC !important;
+        color: var(--text-secondary) !important;
         font-weight: 500 !important;
         margin-bottom: 8px !important;
         letter-spacing: 0.5px !important;
+        font-family: 'Montserrat', sans-serif !important;
+        font-size: 0.9rem !important;
     }
     
     /* Success and error messages */
     .success-message {
-        background: rgba(80, 250, 123, 0.1);
-        border-left: 3px solid #50FA7B;
-        padding: 12px 16px;
+        background: rgba(52, 211, 153, 0.1);
+        border-left: 3px solid #34D399;
+        padding: 14px 18px;
         border-radius: 6px;
-        color: #50FA7B;
+        color: #34D399;
         margin: 16px 0;
+        font-family: 'Hind', sans-serif;
     }
     
     .error-message {
-        background: rgba(255, 85, 85, 0.1);
-        border-left: 3px solid #FF5555;
-        padding: 12px 16px;
+        background: rgba(239, 68, 68, 0.1);
+        border-left: 3px solid #EF4444;
+        padding: 14px 18px;
         border-radius: 6px;
-        color: #FF5555;
+        color: #EF4444;
         margin: 16px 0;
+        font-family: 'Hind', sans-serif;
     }
     
     /* Info box */
     .info-box {
-        background: rgba(139, 233, 253, 0.1);
-        border-left: 3px solid #8BE9FD;
-        padding: 12px 16px;
+        background: rgba(45, 90, 254, 0.05);
+        border-left: 3px solid var(--royal-blue);
+        padding: 14px 18px;
         border-radius: 6px;
-        color: #8BE9FD;
+        color: var(--text-secondary);
         margin: 16px 0;
+        font-family: 'Hind', sans-serif;
     }
     
     /* Header */
     .zen-header {
         text-align: center;
         margin-bottom: 40px;
-        padding: 30px 0;
+        padding: 35px 0;
     }
     
     .zen-header h1 {
-        color: #7ECEFF;
+        color: #FFFFFF;
         font-size: 2.2rem;
-        margin-bottom: 10px;
-        letter-spacing: 1px;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-transform: uppercase;
     }
     
     .zen-header p {
-        color: #A5BCCC;
+        color: var(--royal-accent);
         font-size: 1.1rem;
         max-width: 600px;
         margin: 0 auto;
-        font-weight: 300;
+        font-weight: 400;
         letter-spacing: 0.5px;
     }
     
     /* Icon styling */
     .zen-icon {
-        font-size: 2.2rem;
-        color: #FF7EC6;
-        margin-bottom: 16px;
+        font-size: 1.8rem;
+        color: var(--royal-blue);
+        margin-bottom: 18px;
         display: inline-block;
-        text-shadow: 0 2px 8px rgba(255, 126, 198, 0.4);
     }
     
     /* Custom checkbox */
     .stCheckbox {
         border-radius: 6px;
         padding: 10px;
-        background: rgba(126, 206, 255, 0.05);
+        background: rgba(45, 90, 254, 0.05);
         margin: 12px 0;
     }
-    
-    /* Tooltip customization */
-    .stTooltip {
-        color: #FF7EC6;
+
+    .stCheckbox label {
+        color: var(--text-secondary) !important;
     }
     
     /* Streamlit elements overall customization */
     .stProgress .st-emotion-cache-11s8ty4 {
-        background-color: rgba(126, 206, 255, 0.2) !important;
+        background-color: rgba(45, 90, 254, 0.1) !important;
     }
     
     .stProgress .st-emotion-cache-11s8ty4 > div {
-        background: linear-gradient(90deg, #7ECEFF, #FF7EC6) !important;
+        background: var(--royal-blue) !important;
     }
     
     /* Analytics customizations */
     .stPlotlyChart {
-        background: rgba(30, 30, 46, 0.5);
+        background: rgba(26, 26, 46, 0.7);
         border-radius: 8px;
-        padding: 6px;
+        padding: 8px;
         border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    }
+        box-shadow
     
     /* Pandas dataframe styling */
     .dataframe {
