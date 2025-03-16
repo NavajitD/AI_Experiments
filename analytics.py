@@ -1,4 +1,11 @@
 import streamlit as st
+# Set page config FIRST - before any other Streamlit commands
+st.set_page_config(
+    page_title="Expense Analytics Dashboard",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
 import requests
 import json
 import pandas as pd
@@ -17,13 +24,6 @@ logger = logging.getLogger(__name__)
 
 # Google Apps Script URL
 FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1HZs60TbbLxHmX1HQKpDiM_aGuGewhT4azBzuvoIqnvp3pEG-nhWe-hz-nK78YXnPkw/exec"
-
-# Set dark theme
-st.set_page_config(
-    page_title="Expense Analytics Dashboard",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
 
 # Custom CSS for dark theme
 st.markdown("""
