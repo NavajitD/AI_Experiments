@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
+import analytics
 
 # Initialize session state variables if they don't exist
 if 'predicted_category' not in st.session_state:
@@ -315,6 +316,9 @@ def main():
         <p>Track your spending habits with our AI-powered expense management system</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Show analytics after the form
+    analytics.show_analytics()
     
     # Create a container for the form
     with st.container():
