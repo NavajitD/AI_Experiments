@@ -74,7 +74,7 @@ def get_category_prediction(expense_name):
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
     # Replace with your deployed Google Apps Script web app URL
-    apps_script_url = "https://script.google.com/macros/s/AKfycbyHFa0znnd96iJwy3LD7nUOm9BTjyqBf1je8rcvSSKDUquWryJdwDhjyXIZd3ZiniT3kQ/exec"
+    apps_script_url = "https://script.google.com/macros/s/AKfycbzMTJrOaZmukfWfOT5rdYcbfI7_JutqVle4dp52Wusl9FA3MKEe7CuWhfnBR6jairyOKQ/exec"
     
     try:
         headers = {"Content-Type": "application/json"}
