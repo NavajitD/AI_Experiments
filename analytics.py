@@ -12,7 +12,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Google Apps Script URL (same as yours)
-FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTqMtjJC1QGLc8ZMY0gti8iTqejrCiWS8Ezip3h_nV6VXifv1vP8Uz-PC34r2-8pHx2Q/exec"
+FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyvQylzEz7uxrpizadLThdrDl5z3fGG2kV7InhLissWKH2uw1uzPCfi6TzDLi_iRB8Hg/exec"
 
 def fetch_expense_data():
     try:
