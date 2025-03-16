@@ -12,86 +12,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Google Apps Script URL (same as yours)
-FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZ8Ltcz5n-kEI3b7zBJU9eH0K8KdiBveCEk6-XczwMOc8I-uxopyCp75S8HR-d2Bvsig/exec"
+FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTqMtjJC1QGLc8ZMY0gti8iTqejrCiWS8Ezip3h_nV6VXifv1vP8Uz-PC34r2-8pHx2Q/exec"
 
 def fetch_expense_data():
-    """Fetch and validate data with enhanced diagnostics"""
     try:
-        # Add cache busting to prevent stale responses
-        timestamp = int(datetime.now().timestamp())
-        url = f"{FETCH_SCRIPT_URL}?cache={timestamp}"
+        response = requests.get(FETCH_SCRIPT_URL, timeout=10)
         
-        logger.info(f"🔍 Attempting to fetch data from: {url}")
-        response = requests.get(url, timeout=15)
-        
-        # Log raw response details
-        logger.debug(f"📄 Response status: {response.status_code}")
-        logger.debug(f"🔖 Response headers: {dict(response.headers)}")
-        logger.debug(f"📝 First 500 characters of response:\n{response.text[:500]}")
-
-        # Check for common error patterns
-        if response.status_code == 401:
-            logger.error("🔒 Authentication required")
-            st.error("Authorization needed - check script permissions")
-            return []
-
-        if "text/html" in response.headers.get('Content-Type', ''):
-            logger.error("🖥️ Received HTML response instead of JSON")
-            st.error("""
-            ❗ Script Configuration Issue Detected:
-            1. Open the script URL directly in your browser
-            2. Ensure you see JSON data, not a login page
-            3. Redeploy the script with:
-               - Execute as: Me
-               - Access: Anyone, even anonymous
-            """)
-            return []
-
+        # Check for JSON errors
         try:
-            data = response.json()
-            logger.info(f"✅ Successfully parsed {len(data.get('data', []))} records")
-        except json.JSONDecodeError as e:
-            logger.error(f"❌ JSON parsing failed: {str(e)}")
-            st.error(f"""
-            🛠️ Data Format Issue Detected:
-            Server response isn't valid JSON. Common causes:
-            1. Script is returning HTML/error messages
-            2. Incorrect data structure from Google Sheets
-            3. Authorization requirements
+            response.json()
+        except json.JSONDecodeError:
+            if "Google Apps Script" in response.text:
+                st.error("""
+                🔧 Script Configuration Required:
+                1. Open the script URL in browser
+                2. Click 'Review Permissions'
+                3. Choose your Google account
+                4. Click 'Advanced' > 'Go to [Project Name]'
+                5. Click 'Allow'
+                """)
+            return []
             
-            🔗 Test the script directly: {FETCH_SCRIPT_URL}
-            """)
-            return []
-
-        # Validate response structure
-        if 'data' not in data:
-            logger.error(f"🔍 Missing 'data' key in response. Keys found: {data.keys()}")
-            st.error("""
-            📛 Unexpected Response Structure:
-            The script should return {{"data": [...]}}
-            Verify your Google Apps Script code:
-            function doGet() {{
-              return ContentService
-                .createTextOutput(JSON.stringify({{ data: yourData }}))
-                .setMimeType(ContentService.MimeType.JSON);
-            }}
-            """)
-            return []
-
-        return data['data']
-
-    except requests.exceptions.SSLError:
-        logger.error("🔒 SSL Certificate verification failed")
-        st.error("Security connection failed - check system date/time")
-        return []
+        return response.json().get('data', [])
         
     except Exception as e:
-        logger.error(f"💥 Unexpected error: {str(e)}", exc_info=True)
-        st.error("""
-        🌐 Network Issue Detected:
-        1. Check your internet connection
-        2. Try refreshing the page
-        3. If using VPN, ensure proper connectivity
+        st.error(f"""
+        🚨 Connection Error:
+        {str(e)}
+        Verify the script is deployed as:
+        - Execute as: Me
+        - Who has access: Anyone
         """)
         return []
 
