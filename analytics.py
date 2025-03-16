@@ -15,45 +15,63 @@ logger = logging.getLogger(__name__)
 FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygEKgEV6irH-nnJci-2YWsFVLOZokSpyVpaxACU14JcekHyiMSU2UltkDvw7aIaINYng/exec"
 
 def fetch_expense_data():
-    """Fetch expense data from Google Sheets with enhanced error handling"""
+    """Fetch expense data with detailed diagnostics"""
     try:
-        logger.info(f"Attempting to fetch data from {FETCH_SCRIPT_URL}")
-        response = requests.get(FETCH_SCRIPT_URL, timeout=10)
+        logger.info(f"Fetching data from: {FETCH_SCRIPT_URL}")
+        response = requests.get(FETCH_SCRIPT_URL, timeout=15)
         
-        logger.debug(f"Response status code: {response.status_code}")
-        logger.debug(f"Response headers: {response.headers}")
-        logger.debug(f"Response content sample: {response.text[:200]}...")
+        # Log raw response details
+        logger.debug(f"Status Code: {response.status_code}")
+        logger.debug(f"Response Headers: {dict(response.headers)}")
+        logger.debug(f"First 200 chars: {response.text[:200]}")
 
         if response.status_code != 200:
-            st.error(f"HTTP Error {response.status_code}: {response.reason}")
-            logger.error(f"Failed to fetch data. Status: {response.status_code}, Response: {response.text}")
+            error_msg = f"Server Error: {response.status_code} - {response.reason}"
+            logger.error(error_msg)
+            st.error("Failed to connect to data source. Please try again later.")
             return []
 
         try:
-            json_data = response.json()
-            logger.info(f"Successfully parsed JSON response. Data keys: {json_data.keys()}")
+            data = response.json()
+            logger.info(f"Received {len(data.get('data', []))} records")
+            return data.get('data', [])
         except json.JSONDecodeError as e:
-            st.error("Invalid JSON response from server")
-            logger.error(f"JSON Decode Error: {str(e)}")
-            logger.error(f"Raw response content: {response.text}")
+            logger.error(f"JSON Parse Error: {str(e)}")
+            logger.error(f"Raw Response: {response.text[:500]}")
+            st.error("Data format error. Please check the data source.")
             return []
 
-        if 'data' not in json_data:
-            st.error("Unexpected data format: 'data' key missing")
-            logger.error(f"Missing 'data' key in response. Full response: {json_data}")
-            return []
-
-        logger.info(f"Successfully fetched {len(json_data['data'])} records")
-        return json_data.get('data', [])
-
-    except requests.exceptions.RequestException as e:
-        st.error(f"Network error: {str(e)}")
-        logger.error(f"Request Exception: {str(e)}", exc_info=True)
+    except requests.exceptions.Timeout:
+        logger.error("Request timed out after 15 seconds")
+        st.error("Connection timeout. Please check your internet connection.")
         return []
     except Exception as e:
-        st.error(f"Unexpected error: {str(e)}")
-        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected Error: {str(e)}", exc_info=True)
+        st.error("Temporary data unavailability. Try refreshing the page.")
         return []
+
+def validate_data_structure(df):
+    """Ensure data matches expected schema"""
+    required_columns = {
+        'date': 'datetime64[ns]',
+        'amount': 'float64',
+        'category': 'object',
+        'paymentMethod': 'object'
+    }
+    
+    errors = []
+    for col, dtype in required_items:
+        if col not in df.columns:
+            errors.append(f"Missing column: {col}")
+        elif not pd.api.types.is_dtype(df[col].dtype, dtype):
+            errors.append(f"Invalid dtype for {col}: {df[col].dtype}")
+    
+    if errors:
+        logger.error(f"Data validation failed: {', '.join(errors)}")
+        st.error("Data source format mismatch. Contact support.")
+        return False
+    
+    return True
 
 def process_data(df):
     """Process data for analytics with validation"""
@@ -131,43 +149,46 @@ def create_monthly_trend_chart(df):
         return go.Figure()
 
 def show_analytics():
-    """Main analytics function with error boundaries"""
+    """Main analytics with fallback UI"""
     try:
-        logger.info("Starting analytics processing")
-        raw_data = fetch_expense_data()
-        
-        if not raw_data:
-            st.info("No expense data available yet!")
-            logger.info("No data available for analytics")
-            return
+        with st.spinner("Loading financial insights..."):
+            raw_data = fetch_expense_data()
             
-        logger.info(f"Processing {len(raw_data)} records")
-        df = process_data(pd.DataFrame(raw_data))
-        
-        if df.empty:
-            st.warning("No valid data available for visualization")
-            logger.warning("Processed DataFrame is empty")
-            return
-
-        current_month = datetime.now().strftime('%b %Y')
-        current_month_df = df[df['month_year'] == current_month]
-        current_month_total = current_month_df['amount'].sum()
-        
-        display_current_month_total(current_month_total)
-        
-        col1, col2 = st.columns([3, 2])
-        
-        with col1:
-            st.plotly_chart(create_monthly_trend_chart(df), use_container_width=True)
-        
-        with col2:
-            if not current_month_df.empty:
-                st.plotly_chart(create_payment_method_chart(current_month_df), use_container_width=True)
-            else:
-                st.info("No expenses recorded for current month yet!")
+            if not raw_data:
+                st.info("📭 No expense records found")
+                return
                 
-        logger.info("Analytics processing completed successfully")
-        
+            df = process_data(pd.DataFrame(raw_data))
+            
+            if df.empty:
+                st.warning("⚠️ No valid data to display")
+                return
+                
+            # Display core metrics
+            st.subheader("💰 Spending Overview")
+            display_current_month_total(df)
+            
+            # Create visualization section
+            st.subheader("📈 Trend Analysis")
+            col1, col2 = st.columns([3, 2])
+            
+            with col1:
+                if not df.empty:
+                    st.plotly_chart(create_monthly_trend_chart(df))
+                else:
+                    st.info("No historical data available")
+                    
+            with col2:
+                current_data = get_current_month_data(df)
+                if not current_data.empty:
+                    st.plotly_chart(create_payment_method_chart(current_data))
+                else:
+                    st.info("No current month expenses")
+                    
     except Exception as e:
-        st.error(f"Analytics failed: {str(e)}")
-        logger.error(f"Analytics fatal error: {str(e)}", exc_info=True)
+        logger.error(f"Analytics Failure: {str(e)}", exc_info=True)
+        st.error("""🚨 Failed to load analytics. 
+            We're working to fix this! Try these steps:
+            1. Refresh the page
+            2. Check your internet connection
+            3. Contact support if issue persists""")
