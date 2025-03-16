@@ -12,7 +12,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Google Apps Script URL (same as yours)
-FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyaftp3Esc-ponmRMHUeDPkASNzeI2AmpuMGXr9v7UikUyMIhr331ma013yjOXzgTd7qw/exec"
+FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxztHnsS5lvhEr9GGT_jBiWygsM2NRaIZEMJndeGuMhvJ_GX-hwDOlpj3sKqYaRnTMyLQ/exec"
 
 def fetch_expense_data():
     """Fetch and validate data with enhanced diagnostics"""
