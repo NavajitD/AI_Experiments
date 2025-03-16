@@ -313,7 +313,7 @@ def main():
             <span class="icon">💰</span>
         </div>
         <h1>EXPENSE TRACKER</h1>
-        <p>Track your spending habits with our AI-powered expense management system</p>
+        <p>Track your expenses with our AI-powered system</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -329,7 +329,7 @@ def main():
             with st.container():
                 st.markdown("""
                 <div class="glass-card">
-                    <h3 class="title-font">Add New Expense</h3>
+                    <h3 class="title-font">Add Expense</h3>
                 """, unsafe_allow_html=True)
                 
                 # Form to capture expense details
