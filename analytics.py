@@ -15,62 +15,116 @@ logger = logging.getLogger(__name__)
 FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbygEKgEV6irH-nnJci-2YWsFVLOZokSpyVpaxACU14JcekHyiMSU2UltkDvw7aIaINYng/exec"
 
 def fetch_expense_data():
-    """Fetch expense data with detailed diagnostics"""
+    """Fetch and validate expense data with enhanced diagnostics"""
     try:
-        logger.info(f"Fetching data from: {FETCH_SCRIPT_URL}")
-        response = requests.get(FETCH_SCRIPT_URL, timeout=15)
+        # Add cache busting to avoid stale responses
+        cache_buster = int(datetime.now().timestamp())
+        url = f"{FETCH_SCRIPT_URL}?cache={cache_buster}"
+        
+        logger.info(f"Fetching data from: {url}")
+        response = requests.get(url, timeout=15)
         
         # Log raw response details
         logger.debug(f"Status Code: {response.status_code}")
         logger.debug(f"Response Headers: {dict(response.headers)}")
-        logger.debug(f"First 200 chars: {response.text[:200]}")
-
-        if response.status_code != 200:
-            error_msg = f"Server Error: {response.status_code} - {response.reason}"
-            logger.error(error_msg)
-            st.error("Failed to connect to data source. Please try again later.")
+        logger.debug(f"First 500 characters: {response.text[:500]}")
+        
+        # Check for common error patterns
+        if "DOCTYPE html" in response.text:
+            logger.error("Received HTML response instead of JSON")
+            st.error("""
+            🔌 Connection Issue Detected:
+            - This usually means the data source is unavailable
+            - Check if the Google Sheet is properly shared
+            - Verify the script deployment permissions
+            """)
             return []
 
+        if response.status_code == 401:
+            logger.error("Authentication required")
+            st.error("🔐 Authorization needed - check script permissions")
+            return []
+
+        if 400 <= response.status_code < 500:
+            logger.error(f"Client error: {response.status_code}")
+            st.error("📛 Invalid request configuration")
+            return []
+
+        # Attempt JSON parsing with detailed diagnostics
         try:
             data = response.json()
-            logger.info(f"Received {len(data.get('data', []))} records")
-            return data.get('data', [])
+            logger.info("Successfully parsed JSON response")
         except json.JSONDecodeError as e:
-            logger.error(f"JSON Parse Error: {str(e)}")
-            logger.error(f"Raw Response: {response.text[:500]}")
-            st.error("Data format error. Please check the data source.")
+            logger.error(f"JSON parsing failed: {str(e)}")
+            logger.error(f"Full response: {response.text}")
+            st.error("""
+            🛠️ Data Format Mismatch:
+            - The server response isn't valid JSON
+            - Common causes:
+              1. Incorrect script deployment
+              2. Authorization requirements
+              3. Script runtime errors
+            - Check script execution logs in Google Cloud
+            """)
             return []
 
-    except requests.exceptions.Timeout:
-        logger.error("Request timed out after 15 seconds")
-        st.error("Connection timeout. Please check your internet connection.")
+        # Validate response structure
+        if 'data' not in data:
+            logger.error(f"Missing 'data' key in response: {data.keys()}")
+            st.error("""
+            🔍 Unexpected Data Structure:
+            - The response format doesn't match expectations
+            - Verify the Google Apps Script is returning:
+              { data: [...] }
+            """)
+            return []
+
+        logger.info(f"Received {len(data['data'])} valid records")
+        return data['data']
+
+    except requests.exceptions.SSLError:
+        logger.error("SSL Certificate verification failed")
+        st.error("🔒 Security connection failed - check system date/time")
         return []
+        
     except Exception as e:
-        logger.error(f"Unexpected Error: {str(e)}", exc_info=True)
-        st.error("Temporary data unavailability. Try refreshing the page.")
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        st.error("""
+        🌐 Network Issue Detected:
+        - Check your internet connection
+        - Try refreshing the page
+        - If using VPN, ensure proper connectivity
+        """)
         return []
 
-def validate_data_structure(df):
-    """Ensure data matches expected schema"""
-    required_columns = {
-        'date': 'datetime64[ns]',
-        'amount': 'float64',
-        'category': 'object',
-        'paymentMethod': 'object'
+def validate_response_structure(data):
+    """Deep validation of response data structure"""
+    if not isinstance(data, list):
+        logger.error(f"Top-level data is not a list: {type(data)}")
+        return False
+        
+    required_fields = {
+        'date': str,
+        'amount': (int, float),
+        'category': str,
+        'paymentMethod': str
     }
     
-    errors = []
-    for col, dtype in required_items:
-        if col not in df.columns:
-            errors.append(f"Missing column: {col}")
-        elif not pd.api.types.is_dtype(df[col].dtype, dtype):
-            errors.append(f"Invalid dtype for {col}: {df[col].dtype}")
-    
-    if errors:
-        logger.error(f"Data validation failed: {', '.join(errors)}")
-        st.error("Data source format mismatch. Contact support.")
-        return False
-    
+    for i, record in enumerate(data):
+        if not isinstance(record, dict):
+            logger.error(f"Record {i} is not a dictionary: {type(record)}")
+            return False
+            
+        missing = [k for k in required_fields if k not in record]
+        if missing:
+            logger.error(f"Record {i} missing fields: {missing}")
+            return False
+            
+        for field, types in required_fields.items():
+            if not isinstance(record[field], types):
+                logger.error(f"Record {i} field {field} has invalid type {type(record[field])}")
+                return False
+                
     return True
 
 def process_data(df):
