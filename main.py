@@ -128,208 +128,274 @@ def main():
     # Set page config
     st.set_page_config(
         page_title="Zen Expense Tracker",
-        page_icon="🍃",
+        page_icon="💸",
         layout="wide"
     )
     
-    # CSS for zen design with muted red and yellow
+    # CSS for dark theme design
     st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600&family=Merriweather:wght@300;400;700&display=swap');
+    @font-face {
+        font-family: 'Sole Sans';
+        src: url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
+        font-weight: 400;
+        font-style: normal;
+    }
+        
+    @font-face {
+        font-family: 'Orbi';
+        src: url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap');
+        font-weight: 400;
+        font-style: normal;
+    }
     
     * {
-        font-family: 'Nunito', sans-serif;
+        font-family: 'Sole Sans', 'Montserrat', sans-serif;
         transition: all 0.3s ease;
     }
     
-    h1, h2, .title-font {
-        font-family: 'Merriweather', serif !important;
-        font-weight: 400 !important;
-        color: #8A3033 !important;
+    h1, h2, h3, h4, .title-font {
+        font-family: 'Sole Sans', 'Montserrat', sans-serif !important;
+        font-weight: 500 !important;
+        color: #E0E0E0 !important;
     }
     
-    /* Soft background */
+    p, span, div, label, input, select, option {
+        font-family: 'Orbi', 'Montserrat', sans-serif;
+    }
+    
+    /* Dark theme background */
     .stApp {
-        background: linear-gradient(135deg, #FFF8E1 0%, #FFFBF2 100%);
+        background: linear-gradient(135deg, #1E1E2E 0%, #282838 100%);
+        color: #E0E0E0;
     }
     
     /* Zen card effect */
     .zen-card {
-        background: #FFFAF0;
-        border-radius: 8px;
-        border: 1px solid rgba(138, 48, 51, 0.1);
+        background: #262636;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
         padding: 24px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(138, 48, 51, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
     
     .zen-card h3 {
-        color: #8A3033;
+        color: #7ECEFF;
         font-weight: 500;
         margin-bottom: 16px;
-        border-bottom: 1px solid rgba(138, 48, 51, 0.1);
-        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(126, 206, 255, 0.2);
+        padding-bottom: 12px;
+    }
+    
+    /* Glass card effect */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     }
     
     /* Form styling */
     .stTextInput input, .stNumberInput input, .stDateInput input, .stSelectbox select {
-        border-radius: 6px !important;
-        border: 1px solid rgba(138, 48, 51, 0.2) !important;
-        background: #FFFDF7 !important;
-        padding: 8px 12px !important;
-        color: #5D4037 !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(126, 206, 255, 0.2) !important;
+        background: rgba(30, 30, 46, 0.8) !important;
+        padding: 10px 14px !important;
+        color: #E0E0E0 !important;
         box-shadow: none !important;
     }
     
     .stTextInput input:focus, .stNumberInput input:focus, .stDateInput input:focus, .stSelectbox select:focus {
-        border-color: rgba(204, 143, 77, 0.6) !important;
-        box-shadow: 0 0 0 1px rgba(204, 143, 77, 0.2) !important;
+        border-color: #7ECEFF !important;
+        box-shadow: 0 0 0 1px rgba(126, 206, 255, 0.3) !important;
     }
     
+    /* Button styling */
     .stButton>button {
-        border-radius: 6px !important;
-        background: linear-gradient(90deg, #B56E70, #CC8F4D) !important;
-        color: white !important;
-        font-weight: 500 !important;
-        padding: 8px 16px !important;
+        border-radius: 8px !important;
+        background: linear-gradient(90deg, #7ECEFF, #FF7EC6) !important;
+        color: #1E1E2E !important;
+        font-weight: 600 !important;
+        padding: 10px 20px !important;
         border: none !important;
-        box-shadow: 0 2px 4px rgba(138, 48, 51, 0.1) !important;
+        box-shadow: 0 2px 8px rgba(126, 206, 255, 0.3) !important;
+        transition: all 0.3s ease !important;
     }
     
     .stButton>button:hover {
-        background: linear-gradient(90deg, #A25E60, #BD803E) !important;
-        box-shadow: 0 3px 6px rgba(138, 48, 51, 0.15) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(126, 206, 255, 0.4) !important;
     }
     
     /* Custom labels */
     label {
-        color: #8A3033 !important;
+        color: #A5BCCC !important;
         font-weight: 500 !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 8px !important;
+        letter-spacing: 0.5px !important;
     }
     
     /* Success and error messages */
     .success-message {
-        background: rgba(139, 195, 74, 0.1);
-        border-left: 3px solid #8BC34A;
-        padding: 10px 15px;
-        border-radius: 4px;
-        color: #558B2F;
-        margin: 10px 0;
+        background: rgba(80, 250, 123, 0.1);
+        border-left: 3px solid #50FA7B;
+        padding: 12px 16px;
+        border-radius: 6px;
+        color: #50FA7B;
+        margin: 16px 0;
     }
     
     .error-message {
-        background: rgba(138, 48, 51, 0.1);
-        border-left: 3px solid #8A3033;
-        padding: 10px 15px;
-        border-radius: 4px;
-        color: #8A3033;
-        margin: 10px 0;
+        background: rgba(255, 85, 85, 0.1);
+        border-left: 3px solid #FF5555;
+        padding: 12px 16px;
+        border-radius: 6px;
+        color: #FF5555;
+        margin: 16px 0;
     }
     
-    /* Custom info box */
+    /* Info box */
     .info-box {
-        background: rgba(204, 143, 77, 0.1);
-        border-left: 3px solid #CC8F4D;
-        padding: 10px 15px;
-        border-radius: 4px;
-        color: #996B39;
-        margin: 10px 0;
-    }
-    
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .zen-card {
-            padding: 16px;
-        }
-        
-        h1 {
-            font-size: 1.6rem !important;
-        }
+        background: rgba(139, 233, 253, 0.1);
+        border-left: 3px solid #8BE9FD;
+        padding: 12px 16px;
+        border-radius: 6px;
+        color: #8BE9FD;
+        margin: 16px 0;
     }
     
     /* Header */
     .zen-header {
         text-align: center;
-        margin-bottom: 30px;
-        padding: 20px 0;
+        margin-bottom: 40px;
+        padding: 30px 0;
     }
     
     .zen-header h1 {
-        color: #8A3033;
-        font-size: 2rem;
-        margin-bottom: 8px;
-        letter-spacing: 0.5px;
+        color: #7ECEFF;
+        font-size: 2.2rem;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     
     .zen-header p {
-        color: #CC8F4D;
-        font-size: 1rem;
+        color: #A5BCCC;
+        font-size: 1.1rem;
         max-width: 600px;
         margin: 0 auto;
         font-weight: 300;
+        letter-spacing: 0.5px;
     }
     
     /* Icon styling */
     .zen-icon {
-        font-size: 1.8rem;
-        color: #CC8F4D;
-        margin-bottom: 12px;
+        font-size: 2.2rem;
+        color: #FF7EC6;
+        margin-bottom: 16px;
         display: inline-block;
+        text-shadow: 0 2px 8px rgba(255, 126, 198, 0.4);
     }
     
     /* Custom checkbox */
     .stCheckbox {
-        border-radius: 4px;
-        padding: 8px;
-        background: rgba(204, 143, 77, 0.05);
-        margin: 10px 0;
+        border-radius: 6px;
+        padding: 10px;
+        background: rgba(126, 206, 255, 0.05);
+        margin: 12px 0;
     }
     
     /* Tooltip customization */
     .stTooltip {
-        color: #8A3033;
+        color: #FF7EC6;
     }
     
     /* Streamlit elements overall customization */
     .stProgress .st-emotion-cache-11s8ty4 {
-        background-color: rgba(204, 143, 77, 0.2) !important;
+        background-color: rgba(126, 206, 255, 0.2) !important;
     }
     
     .stProgress .st-emotion-cache-11s8ty4 > div {
-        background-color: #CC8F4D !important;
+        background: linear-gradient(90deg, #7ECEFF, #FF7EC6) !important;
     }
     
     /* Analytics customizations */
     .stPlotlyChart {
-        background: #FFFDF7;
-        border-radius: 6px;
-        padding: 4px;
-        border: 1px solid rgba(138, 48, 51, 0.1);
+        background: rgba(30, 30, 46, 0.5);
+        border-radius: 8px;
+        padding: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     }
     
     /* Pandas dataframe styling */
     .dataframe {
         border-collapse: collapse;
-        font-family: 'Nunito', sans-serif;
+        font-family: 'Orbi', 'Montserrat', sans-serif;
         font-size: 0.9rem;
     }
     
     .dataframe th {
-        background-color: rgba(204, 143, 77, 0.1);
-        color: #8A3033;
-        padding: 8px;
-        border: 1px solid rgba(138, 48, 51, 0.1);
+        background-color: rgba(126, 206, 255, 0.1);
+        color: #7ECEFF;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
     .dataframe td {
-        padding: 6px 8px;
-        border: 1px solid rgba(138, 48, 51, 0.1);
-        color: #5D4037;
+        padding: 8px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #E0E0E0;
     }
     
     .dataframe tr:nth-child(even) {
-        background-color: rgba(204, 143, 77, 0.03);
+        background-color: rgba(30, 30, 46, 0.3);
+    }
+    
+    /* Streamlit sidebar */
+    .css-1d391kg, .css-12oz5g7 {
+        background-color: #262636 !important;
+    }
+    
+    /* Streamlit expander */
+    .st-emotion-cache-1xw8zd0 {
+        background-color: #262636 !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Streamlit tabs */
+    .st-emotion-cache-k7vsyb {
+        background-color: rgba(126, 206, 255, 0.1) !important;
+        color: #7ECEFF !important;
+    }
+    
+    .st-emotion-cache-k7vsyb:hover {
+        background-color: rgba(126, 206, 255, 0.2) !important;
+    }
+    
+    .st-emotion-cache-1cypcdb {
+        border-color: #7ECEFF !important;
+        color: #7ECEFF !important;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .zen-card, .glass-card {
+            padding: 16px;
+        }
+        
+        .zen-header h1 {
+            font-size: 1.8rem !important;
+        }
+        
+        .zen-header p {
+            font-size: 0.9rem;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -337,9 +403,9 @@ def main():
     # Zen header
     st.markdown("""
     <div class="zen-header">
-        <span class="zen-icon">🍃</span>
-        <h1>ZEN EXPENSE TRACKER</h1>
-        <p>Mindfully manage your expenses</p>
+        <span class="zen-icon">💸</span>
+        <h1>Small Expense Tracker</h1>
+        <p>Track spending fast with clarity</p>
     </div>
     """, unsafe_allow_html=True)
     
