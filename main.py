@@ -342,9 +342,6 @@ def main():
         <p>Mindfully manage your expenses</p>
     </div>
     """, unsafe_allow_html=True)
-
-    # Show analytics after the form
-    analytics.show_analytics()
     
     # Create a container for the form
     with st.container():
@@ -355,7 +352,7 @@ def main():
             with st.container():
                 st.markdown("""
                 <div class="glass-card">
-                    <h3 class="title-font">Add Expense</h3>
+                    <h3 class="title-font">New Expense</h3>
                 """, unsafe_allow_html=True)
                 
                 # Form to capture expense details
@@ -451,8 +448,9 @@ def main():
                                     st.success("Expense added successfully!")
                                     # Reset form logic here
                                 else:
-                                    st.error(f"Error: {response['message']}")
-                                    
+                                    st.error(f"Error: {response['message']}")                       
+    # Show analytics after the form
+    analytics.show_analytics()
 
 if __name__ == "__main__":
     main()
