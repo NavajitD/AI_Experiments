@@ -1,4 +1,12 @@
 import streamlit as st
+# Set page config as the first Streamlit command
+st.set_page_config(
+    page_title="Expense Tracker",
+    page_icon="✦",
+    layout="wide"
+)
+
+# Rest of my imports
 import requests
 import json
 from datetime import datetime, timedelta
@@ -125,13 +133,6 @@ def create_zen_card(content_function, title=""):
 
 # Main app function
 def main():
-    # Set page config
-    st.set_page_config(
-        page_title="Expense Tracker",
-        page_icon="✦",
-        layout="wide"
-    )
-    
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
