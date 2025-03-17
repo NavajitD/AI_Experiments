@@ -407,7 +407,7 @@ def main():
         border-radius: 8px;
         padding: 8px;
         border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow
+    }
     
     /* Pandas dataframe styling */
     .dataframe {
@@ -593,7 +593,7 @@ def main():
                                 else:
                                     st.error(f"Error: {response['message']}")                       
     # Show analytics after the form
-    #analytics.show_analytics()
+    analytics.show_analytics()
 
 if __name__ == "__main__":
     main()
