@@ -488,6 +488,9 @@ def main():
         <p>Track spending fast with clarity</p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Create analytics view
+    show_analytics()
     
     # Create a container for the form
     with st.container():
