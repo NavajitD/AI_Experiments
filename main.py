@@ -6,14 +6,16 @@ st.set_page_config(
     layout="wide"
 )
 
-# Rest of my imports
+# Then import analytics after setting page config
+import analytics
+
+# Rest of your imports
 import requests
 import json
 from datetime import datetime, timedelta
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
-import analytics
 
 # Initialize session state variables if they don't exist
 if 'predicted_category' not in st.session_state:
