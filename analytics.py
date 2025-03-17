@@ -1,11 +1,4 @@
 import streamlit as st
-# Set page config FIRST - before any other Streamlit commands
-st.set_page_config(
-    page_title="Expense Analytics Dashboard",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
 import requests
 import json
 import pandas as pd
