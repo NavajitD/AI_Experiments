@@ -135,6 +135,7 @@ def create_zen_card(content_function, title=""):
 
 # Main app function
 def main():
+    
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
@@ -463,6 +464,34 @@ def main():
         color: #7ECEFF !important;
     }
     
+    /* Metric container styling for analytics */
+    .metric-container {
+        background-color: var(--dark-card);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .metric-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: var(--royal-blue-light);
+    }
+    
+    .metric-label {
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+    
+    .chart-container {
+        background-color: var(--dark-card);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
     /* Responsive design */
     @media (max-width: 768px) {
         .zen-card, .glass-card {
@@ -480,124 +509,128 @@ def main():
     </style>
     """, unsafe_allow_html=True)
     
-    # Zen header
-    st.markdown("""
-    <div class="zen-header">
-        <span class="zen-icon">💸</span>
-        <h1>Small Expense Tracker</h1>
-        <p>Track spending fast with clarity</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Create analytics view
-    show_analytics()
+    # Create tabs for the app
+    tab1, tab2 = st.tabs(["New Expense", "Trends"])
     
-    # Create a container for the form
-    with st.container():
-        col1, col2 = st.columns([4, 1])
+    with tab1:
+        # Zen header
+        st.markdown("""
+        <div class="zen-header">
+            <span class="zen-icon">💸</span>
+            <h1>Small Expense Tracker</h1>
+            <p>Track spending fast with clarity</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col1:
-            # Create a glass card for the form
-            with st.container():
-                st.markdown("""
-                <div class="glass-card">
-                    <h3 class="title-font">New Expense</h3>
-                """, unsafe_allow_html=True)
-                
-                # Form to capture expense details
-                with st.form(key="expense_form"):
-                    # Expense name
-                    expense_name = st.text_input("Expense name", key="expense_name_input")
-                    
-                    # Category with Gemini prediction
-                    if expense_name and st.session_state.get('category_predicted') != expense_name:
-                        with st.spinner("Predicting category..."):
-                            try:
-                                predicted_category = get_category_prediction(expense_name)
-                                st.session_state['predicted_category'] = predicted_category
-                                st.session_state['category_predicted'] = expense_name
-                            except Exception as e:
-                                st.error(f"Error predicting category: {str(e)}")
-                                st.session_state['predicted_category'] = "Miscellaneous"
-                    
-                    # All possible categories
-                    categories = [
-                        "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
-                        "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
-                        "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone"
-                    ]
-                    
-                    # Default to predicted category if available
-                    default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
-                    default_index = categories.index(default_category) if default_category in categories else 0
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        category = st.selectbox("Category", categories, index=default_index, key="category_input")
-                        
-                        # Payment method
-                        payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Cash", "Debit card", "Net Banking"]
-                        payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
-                    
-                    with col2:
-                        # Amount in Rupees
-                        amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
-                        
-                        # Date with calendar component
-                        today = datetime.now().date()
-                        date = st.date_input("Date", value=today, key="date_input")
-                    
-                    # Month and Year (auto-filled based on date)
-                    month = date.strftime("%B")
-                    year = date.year
-                    
-                    # Billing cycle (if Credit Card is selected)
-                    if payment_method == "Credit card":
-                        billing_cycle = get_billing_cycle(date)
-                        st.markdown(f"""
-                        <div class="info-box">
-                            <strong>Billing Cycle:</strong> {billing_cycle}
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        billing_cycle = ""
-                    
-                    # Shared expense
-                    shared = st.checkbox("Shared expense", value=False, key="shared_input")
+        # Create a container for the form
+        with st.container():
+            col1, col2 = st.columns([4, 1])
             
-                    # Data preparation
-                    data = {
-                        "expenseName": expense_name,
-                        "category": category,
-                        "amount": amount,
-                        "date": date.strftime("%Y-%m-%d"),
-                        "month": month,
-                        "year": year,
-                        "paymentMethod": payment_method,
-                        "shared": "Yes" if shared else "No",
-                        "billingCycle": billing_cycle,
-                        "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    }
+            with col1:
+                # Create a glass card for the form
+                with st.container():
+                    st.markdown("""
+                    <div class="glass-card">
+                        <h3 class="title-font">New Expense</h3>
+                    """, unsafe_allow_html=True)
                     
-                    # Submit button
-                    submitted = st.form_submit_button("Add expense")
-                    
-                    if submitted:
-                        if not expense_name:
-                            st.error("Please enter an expense name.")
-                        elif amount <= 0:
-                            st.error("Amount must be greater than 0.")
+                    # Form to capture expense details
+                    with st.form(key="expense_form"):
+                        # Expense name
+                        expense_name = st.text_input("Expense name", key="expense_name_input")
+                        
+                        # Category with Gemini prediction
+                        if expense_name and st.session_state.get('category_predicted') != expense_name:
+                            with st.spinner("Predicting category..."):
+                                try:
+                                    predicted_category = get_category_prediction(expense_name)
+                                    st.session_state['predicted_category'] = predicted_category
+                                    st.session_state['category_predicted'] = expense_name
+                                except Exception as e:
+                                    st.error(f"Error predicting category: {str(e)}")
+                                    st.session_state['predicted_category'] = "Miscellaneous"
+                        
+                        # All possible categories
+                        categories = [
+                            "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
+                            "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
+                            "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone"
+                        ]
+                        
+                        # Default to predicted category if available
+                        default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
+                        default_index = categories.index(default_category) if default_category in categories else 0
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            category = st.selectbox("Category", categories, index=default_index, key="category_input")
+                            
+                            # Payment method
+                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Cash", "Debit card", "Net Banking"]
+                            payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
+                        
+                        with col2:
+                            # Amount in Rupees
+                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+                            
+                            # Date with calendar component
+                            today = datetime.now().date()
+                            date = st.date_input("Date", value=today, key="date_input")
+                        
+                        # Month and Year (auto-filled based on date)
+                        month = date.strftime("%B")
+                        year = date.year
+                        
+                        # Billing cycle (if Credit Card is selected)
+                        if payment_method == "Credit card":
+                            billing_cycle = get_billing_cycle(date)
+                            st.markdown(f"""
+                            <div class="info-box">
+                                <strong>Billing Cycle:</strong> {billing_cycle}
+                            </div>
+                            """, unsafe_allow_html=True)
                         else:
-                            # Submit to Google Apps Script
-                            with st.spinner("Adding expense..."):
-                                response = submit_to_google_apps_script(data)
-                                
-                                if response["status"] == "success":
-                                    st.success("Expense added successfully!")
-                                    # Reset form logic here
-                                else:
-                                    st.error(f"Error: {response['message']}")                       
+                            billing_cycle = ""
+                        
+                        # Shared expense
+                        shared = st.checkbox("Shared expense", value=False, key="shared_input")
+                
+                        # Data preparation
+                        data = {
+                            "expenseName": expense_name,
+                            "category": category,
+                            "amount": amount,
+                            "date": date.strftime("%Y-%m-%d"),
+                            "month": month,
+                            "year": year,
+                            "paymentMethod": payment_method,
+                            "shared": "Yes" if shared else "No",
+                            "billingCycle": billing_cycle,
+                            "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        
+                        # Submit button
+                        submitted = st.form_submit_button("Add expense")
+                        
+                        if submitted:
+                            if not expense_name:
+                                st.error("Please enter an expense name.")
+                            elif amount <= 0:
+                                st.error("Amount must be greater than 0.")
+                            else:
+                                # Submit to Google Apps Script
+                                with st.spinner("Adding expense..."):
+                                    response = submit_to_google_apps_script(data)
+                                    
+                                    if response["status"] == "success":
+                                        st.success("Expense added successfully!")
+                                        # Reset form logic here
+                                    else:
+                                        st.error(f"Error: {response['message']}")    
+
+        # Create analytics view
+        show_analytics()
 
 if __name__ == "__main__":
     main()
