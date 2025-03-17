@@ -592,8 +592,6 @@ def main():
                                     # Reset form logic here
                                 else:
                                     st.error(f"Error: {response['message']}")                       
-    # Show analytics after the form
-    #analytics.show_analytics()
 
 if __name__ == "__main__":
     main()
