@@ -27,7 +27,7 @@ if 'category_predicted' not in st.session_state:
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
     if "GOOGLE_API_KEY" not in os.environ:
-        os.environ["GOOGLE_API_KEY"] = "AIzaSyAqMFvXnZ4JLeYqySr1rkY5Ooc5pYdPmrc"
+        os.environ["GOOGLE_API_KEY"] = "AIzaSyDRrTvYX6F7EJUK789Yz0IQcMMbjCRXwso"
     
     api_key = os.environ.get("GOOGLE_API_KEY")
     
