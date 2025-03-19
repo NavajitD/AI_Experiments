@@ -17,6 +17,10 @@ from datetime import datetime, timedelta
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 # Initialize session state variables if they don't exist
 if 'predicted_category' not in st.session_state:
@@ -26,19 +30,20 @@ if 'category_predicted' not in st.session_state:
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
-    if "GOOGLE_API_KEY" not in os.environ:
-        os.environ["GOOGLE_API_KEY"] = "AIzaSyDRrTvYX6F7EJUK789Yz0IQcMMbjCRXwso"
-    
+    # Get API key from environment variable
     api_key = os.environ.get("GOOGLE_API_KEY")
     
+    # Check if API key is available
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY is not set")
+        st.warning("Google API key not found. Please set the GOOGLE_API_KEY environment variable.")
+        return "Miscellaneous"
     
-    model = ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro",
-        google_api_key=api_key
-    )
     try:
+        model = ChatGoogleGenerativeAI(
+            model="gemini-1.5-pro",
+            google_api_key=api_key
+        )
+        
         prompt = f"""
         Classify the following expense into one of these categories:
         - Bike
@@ -117,6 +122,7 @@ def get_billing_cycle(date_obj):
 
 # Main app function
 def main():
+    
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
@@ -149,6 +155,12 @@ def main():
                         <h3 class="title-font">New Expense</h3>
                     """, unsafe_allow_html=True)
                     
+                    # API key input (only show if not set)
+                    if not os.environ.get("GOOGLE_API_KEY"):
+                        api_key = st.text_input("Google API Key (required for category prediction)", type="password")
+                        if api_key:
+                            os.environ["GOOGLE_API_KEY"] = api_key
+                    
                     # Form to capture expense details
                     with st.form(key="expense_form"):
                         # Expense name
@@ -156,20 +168,21 @@ def main():
                         
                         # Category with Gemini prediction
                         if expense_name and st.session_state.get('category_predicted') != expense_name:
-                            with st.spinner("Predicting category..."):
-                                try:
-                                    predicted_category = get_category_prediction(expense_name)
-                                    st.session_state['predicted_category'] = predicted_category
-                                    st.session_state['category_predicted'] = expense_name
-                                except Exception as e:
-                                    st.error(f"Error predicting category: {str(e)}")
-                                    st.session_state['predicted_category'] = "Miscellaneous"
+                            if os.environ.get("GOOGLE_API_KEY"):
+                                with st.spinner("Predicting category..."):
+                                    try:
+                                        predicted_category = get_category_prediction(expense_name)
+                                        st.session_state['predicted_category'] = predicted_category
+                                        st.session_state['category_predicted'] = expense_name
+                                    except Exception as e:
+                                        st.error(f"Error predicting category: {str(e)}")
+                                        st.session_state['predicted_category'] = "Miscellaneous"
                         
                         # All possible categories
                         categories = [
                             "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
                             "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
-                            "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone"
+                            "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone", "Miscellaneous"
                         ]
                         
                         # Default to predicted category if available
@@ -246,7 +259,7 @@ def main():
                                         st.experimental_rerun()
                                     else:
                                         st.error(f"Error: {response['message']}")    
-    
+
     with tab2:
         # Create analytics view
         analytics.show_analytics()
