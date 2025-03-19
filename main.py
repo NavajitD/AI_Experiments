@@ -117,7 +117,6 @@ def get_billing_cycle(date_obj):
 
 # Main app function
 def main():
-    
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
@@ -247,7 +246,7 @@ def main():
                                         st.experimental_rerun()
                                     else:
                                         st.error(f"Error: {response['message']}")    
-
+    
     with tab2:
         # Create analytics view
         analytics.show_analytics()
