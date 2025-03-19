@@ -100,7 +100,7 @@ def show_analytics():
                 st.markdown(f"""
                 <div class="metric-container">
                     <div class="metric-label">Total Spent This Month</div>
-                    <div class="metric-value">${total_spent:,.2f}</div>
+                    <div class="metric-value>₹{total_spent:,.2f}</div>
                     <div>Month to Date: {calendar.month_name[current_month]} {current_year}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -112,7 +112,7 @@ def show_analytics():
                 st.markdown(f"""
                 <div class="metric-container">
                     <div class="metric-label">Average Daily Expense</div>
-                    <div class="metric-value">${avg_daily:,.2f}</div>
+                    <div class="metric-value>₹{avg_daily:,.2f}</div>
                     <div>Based on {days_passed} days</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -126,7 +126,7 @@ def show_analytics():
                     <div class="metric-container">
                         <div class="metric-label">Top Spending Category</div>
                         <div class="metric-value">{top_category}</div>
-                        <div>${top_amount:,.2f}</div>
+                        <div>₹{top_amount:,.2f}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -161,7 +161,7 @@ def show_analytics():
                 color='category',
                 markers=True,
                 title='Weekly Expenses by Category',
-                labels={'amount': 'Amount ($)', 'week_label': 'Week', 'category': 'Category'}
+                labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'}
             )
             
             # Customize the theme to match dark mode
@@ -190,7 +190,7 @@ def show_analytics():
             
             # Add percentage to labels
             payment_totals['label'] = payment_totals.apply(
-                lambda x: f"{x['paymentMethod']}: ${x['amount']:,.2f} ({x['percentage']}%)", axis=1
+                lambda x: f"{x['paymentMethod']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
             )
             
             # Create donut chart
