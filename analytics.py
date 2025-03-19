@@ -18,42 +18,6 @@ logger = logging.getLogger(__name__)
 # Google Apps Script URL
 FETCH_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx1HZs60TbbLxHmX1HQKpDiM_aGuGewhT4azBzuvoIqnvp3pEG-nhWe-hz-nK78YXnPkw/exec"
 
-# Custom CSS for dark theme
-st.markdown("""
-<style>
-    .main {
-        background-color: #0E1117;
-        color: #FAFAFA;
-    }
-    .css-1d391kg, .css-12oz5g7 {
-        background-color: #161B22;
-    }
-    .metric-container {
-        background-color: #161B22;
-        border-radius: 5px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-    .metric-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: #00CED1;
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #A0A0A0;
-    }
-    .chart-container {
-        background-color: #161B22;
-        border-radius: 5px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-</style>
-""", unsafe_allow_html=True)
-
 def fetch_expense_data():
     try:
         response = requests.get(FETCH_SCRIPT_URL, timeout=10)
