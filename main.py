@@ -17,10 +17,9 @@ from datetime import datetime, timedelta
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
-from dotenv import load_dotenv
 
-# Load environment variables from .env file if it exists
-load_dotenv()
+# Set API key directly in the code
+os.environ["GOOGLE_API_KEY"] = "AIzaSyDRrTvYX6F7EJUK789Yz0IQcMMbjCRXwso"
 
 # Initialize session state variables if they don't exist
 if 'predicted_category' not in st.session_state:
@@ -30,12 +29,9 @@ if 'category_predicted' not in st.session_state:
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
-    # Get API key from environment variable
     api_key = os.environ.get("GOOGLE_API_KEY")
     
-    # Check if API key is available
     if not api_key:
-        st.warning("Google API key not found. Please set the GOOGLE_API_KEY environment variable.")
         return "Miscellaneous"
     
     try:
@@ -155,12 +151,6 @@ def main():
                         <h3 class="title-font">New Expense</h3>
                     """, unsafe_allow_html=True)
                     
-                    # API key input (only show if not set)
-                    if not os.environ.get("GOOGLE_API_KEY"):
-                        api_key = st.text_input("Google API Key (required for category prediction)", type="password")
-                        if api_key:
-                            os.environ["GOOGLE_API_KEY"] = api_key
-                    
                     # Form to capture expense details
                     with st.form(key="expense_form"):
                         # Expense name
@@ -168,15 +158,14 @@ def main():
                         
                         # Category with Gemini prediction
                         if expense_name and st.session_state.get('category_predicted') != expense_name:
-                            if os.environ.get("GOOGLE_API_KEY"):
-                                with st.spinner("Predicting category..."):
-                                    try:
-                                        predicted_category = get_category_prediction(expense_name)
-                                        st.session_state['predicted_category'] = predicted_category
-                                        st.session_state['category_predicted'] = expense_name
-                                    except Exception as e:
-                                        st.error(f"Error predicting category: {str(e)}")
-                                        st.session_state['predicted_category'] = "Miscellaneous"
+                            with st.spinner("Predicting category..."):
+                                try:
+                                    predicted_category = get_category_prediction(expense_name)
+                                    st.session_state['predicted_category'] = predicted_category
+                                    st.session_state['category_predicted'] = expense_name
+                                except Exception as e:
+                                    st.error(f"Error predicting category: {str(e)}")
+                                    st.session_state['predicted_category'] = "Miscellaneous"
                         
                         # All possible categories
                         categories = [
