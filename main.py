@@ -81,7 +81,7 @@ def get_category_prediction(expense_name):
 
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
-    apps_script_url = "https://script.google.com/macros/s/AKfycbx1HZs60TbbLxHmX1HQKpDiM_aGuGewhT4azBzuvoIqnvp3pEG-nhWe-hz-nK78YXnPkw/exec"
+    apps_script_url = "https://script.google.com/macros/s/AKfycbwISgM-mNsc6fZmKki2ImDKhsePg_Ixbcku3Ofw9_feNE9OuDUEDamLylrwK5kLB7vGZg/exec"
     
     try:
         headers = {
