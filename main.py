@@ -84,15 +84,32 @@ def submit_to_google_apps_script(data):
     apps_script_url = "https://script.google.com/macros/s/AKfycbx1HZs60TbbLxHmX1HQKpDiM_aGuGewhT4azBzuvoIqnvp3pEG-nhWe-hz-nK78YXnPkw/exec"
     
     try:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
+        # Convert data to JSON string
+        json_data = json.dumps(data)
+        
+        # Log the data being sent for debugging
+        st.write(f"Sending data: {json_data}")
+        
         response = requests.post(
             apps_script_url,
-            data=json.dumps(data),
+            data=json_data,
             headers=headers
         )
         
+        # Log the response for debugging
+        st.write(f"Response status code: {response.status_code}")
+        st.write(f"Response content: {response.text[:100]}")  # Show first 100 chars
+        
         if response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except json.JSONDecodeError:
+                return {"status": "error", "message": "Failed to parse response JSON"}
         else:
             return {"status": "error", "message": f"HTTP Status: {response.status_code}"}
     except Exception as e:
@@ -118,6 +135,9 @@ def get_billing_cycle(date_obj):
 
 # Main app function
 def main():
+    # Hide the debug outputs by default
+    if 'debug_mode' not in st.session_state:
+        st.session_state['debug_mode'] = False
     
     # CSS for premium dark theme design with animated background
     st.markdown("""
@@ -127,7 +147,7 @@ def main():
     """, unsafe_allow_html=True)
     
     # Create tabs for the app
-    tab1, tab2 = st.tabs(["New Expense", "Trends"])
+    tab1, tab2, tab3 = st.tabs(["New Expense", "Trends", "Debug"])
     
     with tab1:
         # Zen header
@@ -236,22 +256,43 @@ def main():
                             elif amount <= 0:
                                 st.error("Amount must be greater than 0.")
                             else:
+                                # Toggle debug mode for this submission
+                                st.session_state['debug_mode'] = True
+                                
                                 # Submit to Google Apps Script
                                 with st.spinner("Adding expense..."):
                                     response = submit_to_google_apps_script(data)
                                     
-                                    if response["status"] == "success":
+                                    if response.get("status") == "success":
                                         st.success("Expense added successfully!")
                                         # Reset form logic here
                                         st.session_state['predicted_category'] = ""
                                         st.session_state['category_predicted'] = ""
                                         st.experimental_rerun()
                                     else:
-                                        st.error(f"Error: {response['message']}")    
+                                        st.error(f"Error: {response.get('message', 'Unknown error')}")
+                                        st.error("Please check the Debug tab for more information.")
 
     with tab2:
         # Create analytics view
         analytics.show_analytics()
+    
+    with tab3:
+        st.header("Debug Information")
+        st.write("This tab shows debugging information when submitting expenses.")
+        
+        # Toggle for debug mode
+        st.session_state['debug_mode'] = st.checkbox("Enable Debug Mode", value=st.session_state['debug_mode'])
+        
+        if st.button("Test Connection to Google Apps Script"):
+            with st.spinner("Testing connection..."):
+                test_data = {
+                    "test": True,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                
+                response = submit_to_google_apps_script(test_data)
+                st.json(response)
 
 if __name__ == "__main__":
     main()
