@@ -26,14 +26,41 @@ if 'predicted_category' not in st.session_state:
     st.session_state['predicted_category'] = ""
 if 'category_predicted' not in st.session_state:
     st.session_state['category_predicted'] = ""
-if 'expense_name_changed' not in st.session_state:
-    st.session_state['expense_name_changed'] = False
 if 'form_submitted' not in st.session_state:
     st.session_state['form_submitted'] = False
+if 'reset_form' not in st.session_state:
+    st.session_state['reset_form'] = False
 
 # Callback for expense name change
 def on_expense_name_change():
-    st.session_state['expense_name_changed'] = True
+    # Only trigger prediction if there's text
+    if st.session_state.expense_name_input:
+        predict_category(st.session_state.expense_name_input)
+
+# Function to predict category
+def predict_category(expense_name):
+    if expense_name and st.session_state.get('category_predicted') != expense_name:
+        with st.spinner("Predicting category..."):
+            try:
+                predicted_category = get_category_prediction(expense_name)
+                st.session_state['predicted_category'] = predicted_category
+                st.session_state['category_predicted'] = expense_name
+            except Exception as e:
+                st.error(f"Error predicting category: {str(e)}")
+                st.session_state['predicted_category'] = "Miscellaneous"
+
+# Function to handle form submission
+def handle_form_submit():
+    st.session_state['form_submitted'] = True
+
+# Function to reset the form
+def reset_form():
+    st.session_state['reset_form'] = True
+    st.session_state['predicted_category'] = ""
+    st.session_state['category_predicted'] = ""
+    st.session_state['form_submitted'] = False
+    # We can't directly set expense_name_input, but we'll use reset_form flag
+    # to handle this in the UI
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
@@ -169,6 +196,14 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
+        # Handle form reset
+        if st.session_state['reset_form']:
+            # Clear the reset flag
+            st.session_state['reset_form'] = False
+            # We can't modify the expense_name_input directly, but we force a rerun
+            # which will show empty widgets due to the cleared category_predicted
+            st.rerun()
+        
         # Create a container for the form
         with st.container():
             col1, col2 = st.columns([4, 1])
@@ -181,20 +216,12 @@ def main():
                         <h3 class="title-font">New Expense</h3>
                     """, unsafe_allow_html=True)
                     
-                    # Expense name input outside the form
-                    expense_name = st.text_input("Expense name", key="expense_name_input", on_change=on_expense_name_change)
-                    
-                    # Process category prediction when expense name changes
-                    if expense_name and st.session_state['expense_name_changed']:
-                        with st.spinner("Predicting category..."):
-                            try:
-                                predicted_category = get_category_prediction(expense_name)
-                                st.session_state['predicted_category'] = predicted_category
-                                st.session_state['category_predicted'] = expense_name
-                            except Exception as e:
-                                st.error(f"Error predicting category: {str(e)}")
-                                st.session_state['predicted_category'] = "Miscellaneous"
-                        st.session_state['expense_name_changed'] = False
+                    # Expense name input with on_change callback
+                    expense_name = st.text_input(
+                        "Expense name", 
+                        key="expense_name_input", 
+                        on_change=on_expense_name_change
+                    )
                     
                     # All possible categories
                     categories = [
@@ -207,7 +234,7 @@ def main():
                     default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
                     default_index = categories.index(default_category) if default_category in categories else 0
                     
-                    # Form for the rest of the inputs (excluding expense name)
+                    # Form for the rest of the inputs
                     with st.form(key="expense_form"):
                         col1, col2 = st.columns(2)
                         
@@ -244,18 +271,17 @@ def main():
                         # Shared expense
                         shared = st.checkbox("Shared expense", value=False, key="shared_input")
                 
-                        # Submit button
-                        submitted = st.form_submit_button("Add expense")
-                        
-                        if submitted:
-                            st.session_state['form_submitted'] = True
+                        # Submit button with callback
+                        submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
                 
                 # Handle form submission outside the form
                 if st.session_state['form_submitted']:
                     if not expense_name:
                         st.error("Please enter an expense name.")
+                        st.session_state['form_submitted'] = False
                     elif 'amount_input' not in st.session_state or st.session_state['amount_input'] <= 0:
                         st.error("Amount must be greater than 0.")
+                        st.session_state['form_submitted'] = False
                     else:
                         # Prepare data for submission
                         data = {
@@ -280,13 +306,8 @@ def main():
                             
                             if response.get("status") == "success":
                                 st.success("Expense added successfully!")
-                                # Reset form logic here
-                                st.session_state['predicted_category'] = ""
-                                st.session_state['category_predicted'] = ""
-                                st.session_state['form_submitted'] = False
-                                # Clear the text input
-                                st.session_state['expense_name_input'] = ""
-                                st.rerun()
+                                # Reset form using our custom reset function
+                                reset_form()
                             else:
                                 st.error(f"Error: {response.get('message', 'Unknown error')}")
                                 st.error("Please check the Debug tab for more information.")
