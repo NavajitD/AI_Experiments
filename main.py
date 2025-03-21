@@ -268,7 +268,7 @@ def main():
                                         # Reset form logic here
                                         st.session_state['predicted_category'] = ""
                                         st.session_state['category_predicted'] = ""
-                                        st.experimental_rerun()
+                                        st.rerun()
                                     else:
                                         st.error(f"Error: {response.get('message', 'Unknown error')}")
                                         st.error("Please check the Debug tab for more information.")
