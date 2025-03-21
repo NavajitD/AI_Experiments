@@ -242,7 +242,7 @@ def main():
                             category = st.selectbox("Category", categories, index=default_index, key="category_input")
                             
                             # Payment method
-                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Cash", "Debit card", "Net Banking"]
+                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
                             payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
                         
                         with col2:
