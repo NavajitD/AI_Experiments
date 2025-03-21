@@ -26,6 +26,14 @@ if 'predicted_category' not in st.session_state:
     st.session_state['predicted_category'] = ""
 if 'category_predicted' not in st.session_state:
     st.session_state['category_predicted'] = ""
+if 'expense_name_changed' not in st.session_state:
+    st.session_state['expense_name_changed'] = False
+if 'form_submitted' not in st.session_state:
+    st.session_state['form_submitted'] = False
+
+# Callback for expense name change
+def on_expense_name_change():
+    st.session_state['expense_name_changed'] = True
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
@@ -93,7 +101,8 @@ def submit_to_google_apps_script(data):
         json_data = json.dumps(data)
         
         # Log the data being sent for debugging
-        st.write(f"Sending data: {json_data}")
+        if st.session_state['debug_mode']:
+            st.write(f"Sending data: {json_data}")
         
         response = requests.post(
             apps_script_url,
@@ -102,8 +111,9 @@ def submit_to_google_apps_script(data):
         )
         
         # Log the response for debugging
-        st.write(f"Response status code: {response.status_code}")
-        st.write(f"Response content: {response.text[:100]}")  # Show first 100 chars
+        if st.session_state['debug_mode']:
+            st.write(f"Response status code: {response.status_code}")
+            st.write(f"Response content: {response.text[:100]}")  # Show first 100 chars
         
         if response.status_code == 200:
             try:
@@ -171,33 +181,34 @@ def main():
                         <h3 class="title-font">New Expense</h3>
                     """, unsafe_allow_html=True)
                     
-                    # Form to capture expense details
+                    # Expense name input outside the form
+                    expense_name = st.text_input("Expense name", key="expense_name_input", on_change=on_expense_name_change)
+                    
+                    # Process category prediction when expense name changes
+                    if expense_name and st.session_state['expense_name_changed']:
+                        with st.spinner("Predicting category..."):
+                            try:
+                                predicted_category = get_category_prediction(expense_name)
+                                st.session_state['predicted_category'] = predicted_category
+                                st.session_state['category_predicted'] = expense_name
+                            except Exception as e:
+                                st.error(f"Error predicting category: {str(e)}")
+                                st.session_state['predicted_category'] = "Miscellaneous"
+                        st.session_state['expense_name_changed'] = False
+                    
+                    # All possible categories
+                    categories = [
+                        "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
+                        "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
+                        "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone", "Miscellaneous"
+                    ]
+                    
+                    # Default to predicted category if available
+                    default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
+                    default_index = categories.index(default_category) if default_category in categories else 0
+                    
+                    # Form for the rest of the inputs (excluding expense name)
                     with st.form(key="expense_form"):
-                        # Expense name
-                        expense_name = st.text_input("Expense name", key="expense_name_input")
-                        
-                        # Category with Gemini prediction
-                        if expense_name and st.session_state.get('category_predicted') != expense_name:
-                            with st.spinner("Predicting category..."):
-                                try:
-                                    predicted_category = get_category_prediction(expense_name)
-                                    st.session_state['predicted_category'] = predicted_category
-                                    st.session_state['category_predicted'] = expense_name
-                                except Exception as e:
-                                    st.error(f"Error predicting category: {str(e)}")
-                                    st.session_state['predicted_category'] = "Miscellaneous"
-                        
-                        # All possible categories
-                        categories = [
-                            "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
-                            "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
-                            "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone", "Miscellaneous"
-                        ]
-                        
-                        # Default to predicted category if available
-                        default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
-                        default_index = categories.index(default_category) if default_category in categories else 0
-                        
                         col1, col2 = st.columns(2)
                         
                         with col1:
@@ -233,45 +244,53 @@ def main():
                         # Shared expense
                         shared = st.checkbox("Shared expense", value=False, key="shared_input")
                 
-                        # Data preparation
-                        data = {
-                            "expenseName": expense_name,
-                            "category": category,
-                            "amount": amount,
-                            "date": date.strftime("%Y-%m-%d"),
-                            "month": month,
-                            "year": year,
-                            "paymentMethod": payment_method,
-                            "shared": "Yes" if shared else "No",
-                            "billingCycle": billing_cycle,
-                            "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                        
                         # Submit button
                         submitted = st.form_submit_button("Add expense")
                         
                         if submitted:
-                            if not expense_name:
-                                st.error("Please enter an expense name.")
-                            elif amount <= 0:
-                                st.error("Amount must be greater than 0.")
+                            st.session_state['form_submitted'] = True
+                
+                # Handle form submission outside the form
+                if st.session_state['form_submitted']:
+                    if not expense_name:
+                        st.error("Please enter an expense name.")
+                    elif 'amount_input' not in st.session_state or st.session_state['amount_input'] <= 0:
+                        st.error("Amount must be greater than 0.")
+                    else:
+                        # Prepare data for submission
+                        data = {
+                            "expenseName": expense_name,
+                            "category": st.session_state['category_input'],
+                            "amount": st.session_state['amount_input'],
+                            "date": st.session_state['date_input'].strftime("%Y-%m-%d"),
+                            "month": st.session_state['date_input'].strftime("%B"),
+                            "year": st.session_state['date_input'].year,
+                            "paymentMethod": st.session_state['payment_method_input'],
+                            "shared": "Yes" if st.session_state['shared_input'] else "No",
+                            "billingCycle": billing_cycle if st.session_state['payment_method_input'] == "Credit card" else "",
+                            "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                        
+                        # Toggle debug mode for this submission
+                        st.session_state['debug_mode'] = True
+                        
+                        # Submit to Google Apps Script
+                        with st.spinner("Adding expense..."):
+                            response = submit_to_google_apps_script(data)
+                            
+                            if response.get("status") == "success":
+                                st.success("Expense added successfully!")
+                                # Reset form logic here
+                                st.session_state['predicted_category'] = ""
+                                st.session_state['category_predicted'] = ""
+                                st.session_state['form_submitted'] = False
+                                # Clear the text input
+                                st.session_state['expense_name_input'] = ""
+                                st.rerun()
                             else:
-                                # Toggle debug mode for this submission
-                                st.session_state['debug_mode'] = True
-                                
-                                # Submit to Google Apps Script
-                                with st.spinner("Adding expense..."):
-                                    response = submit_to_google_apps_script(data)
-                                    
-                                    if response.get("status") == "success":
-                                        st.success("Expense added successfully!")
-                                        # Reset form logic here
-                                        st.session_state['predicted_category'] = ""
-                                        st.session_state['category_predicted'] = ""
-                                        st.rerun()
-                                    else:
-                                        st.error(f"Error: {response.get('message', 'Unknown error')}")
-                                        st.error("Please check the Debug tab for more information.")
+                                st.error(f"Error: {response.get('message', 'Unknown error')}")
+                                st.error("Please check the Debug tab for more information.")
+                                st.session_state['form_submitted'] = False
 
     with tab2:
         # Create analytics view
