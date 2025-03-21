@@ -145,15 +145,20 @@ def show_analytics():
             # Create week-category aggregation
             weekly_category = df.groupby(['year', 'week', 'category'])['amount'].sum().reset_index()
             
-            # Create week labels
+            # Create week labels and sort key for chronological ordering
             weekly_category['week_label'] = weekly_category.apply(
                 lambda x: get_week_label(x['year'], x['week']), axis=1
             )
             
-            # Sort by year and week for proper chronological order
-            weekly_category = weekly_category.sort_values(['year', 'week'])
+            # Create a sort key that combines year and week for proper chronological sorting
+            weekly_category['sort_key'] = weekly_category['year'] * 100 + weekly_category['week']
             
-            # Create the line chart with Plotly
+            # Sort by the combined key for proper chronological order
+            weekly_category = weekly_category.sort_values('sort_key')
+            
+            # Create the line chart with Plotly using category_orders to enforce order
+            week_labels = weekly_category['week_label'].unique()
+            
             fig_weekly = px.line(
                 weekly_category, 
                 x='week_label', 
@@ -161,7 +166,8 @@ def show_analytics():
                 color='category',
                 markers=True,
                 title='Weekly Expenses by Category',
-                labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'}
+                labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
+                category_orders={'week_label': week_labels}  # Enforce order of week labels
             )
             
             # Customize the theme to match dark mode
