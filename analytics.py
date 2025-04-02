@@ -164,9 +164,22 @@ def show_analytics():
                 </div>
                 """, unsafe_allow_html=True)
                 
-            # Average daily expense
+            # Average daily expense - FIX: Calculate based on actual expense date range
             with col2:
-                days_passed = min(now.day, calendar.monthrange(current_year, current_month)[1])
+                if not df_current_month.empty:
+                    # Get the earliest date with an expense this month
+                    first_expense_date = df_current_month['date'].min().date()
+                    today_date = now.date()
+                    
+                    # Calculate the number of days from first expense to today (inclusive)
+                    days_passed = (today_date - first_expense_date).days + 1
+                    
+                    # Safety check to avoid division by zero
+                    if days_passed < 1:
+                        days_passed = 1
+                else:
+                    days_passed = 1  # Default if no data
+                    
                 avg_daily = total_spent / days_passed if days_passed > 0 else 0
                 st.markdown(f"""
                 <div class="metric-container">
@@ -204,19 +217,38 @@ def show_analytics():
             # Add month and year filters for the weekly chart
             filter_col1, filter_col2 = st.columns([1, 1])
             
+            # FIX: Default selection should always be current month/year, even if no data exists
+            current_month_name = calendar.month_name[current_month]
+            
             with filter_col1:
-                selected_month = st.selectbox(
-                    "Select Month", 
-                    options=month_options,
-                    index=month_options.index(calendar.month_name[current_month]) if calendar.month_name[current_month] in month_options else 0
-                )
+                if current_month_name not in month_options and len(month_options) > 0:
+                    selected_month = st.selectbox(
+                        "Select Month", 
+                        options=[current_month_name] + list(month_options),
+                        index=0  # Force current month to be default
+                    )
+                else:
+                    # Use the current month if it exists in the options
+                    selected_month = st.selectbox(
+                        "Select Month", 
+                        options=month_options if month_options else [current_month_name],
+                        index=month_options.index(current_month_name) if current_month_name in month_options else 0
+                    )
             
             with filter_col2:
-                selected_year = st.selectbox(
-                    "Select Year",
-                    options=year_options,
-                    index=year_options.index(current_year) if current_year in year_options else 0
-                )
+                if current_year not in year_options and len(year_options) > 0:
+                    selected_year = st.selectbox(
+                        "Select Year",
+                        options=[current_year] + list(year_options),
+                        index=0  # Force current year to be default
+                    )
+                else:
+                    # Use current year if it exists in options
+                    selected_year = st.selectbox(
+                        "Select Year",
+                        options=year_options if year_options else [current_year],
+                        index=year_options.index(current_year) if current_year in year_options else 0
+                    )
             
             # Filter data based on selection
             selected_month_num = list(calendar.month_name).index(selected_month)
