@@ -13,7 +13,7 @@ import analytics
 # Rest of your imports
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
@@ -34,6 +34,11 @@ if 'shared_percentage' not in st.session_state:
     st.session_state['shared_percentage'] = 50.0
 if 'shared_amount' not in st.session_state:
     st.session_state['shared_amount'] = 0.0
+# Force current date on every app load
+if 'force_current_date' not in st.session_state or st.session_state['force_current_date'] != datetime.now().date():
+    if 'date_input' in st.session_state:
+        st.session_state['date_input'] = datetime.now().date()
+    st.session_state['force_current_date'] = datetime.now().date()
 
 # Callback for expense name change
 def on_expense_name_change():
@@ -78,9 +83,9 @@ def reset_form():
     st.session_state['predicted_category'] = ""
     st.session_state['category_predicted'] = ""
     st.session_state['form_submitted'] = False
-    # Reset date input to today's date
+    # Reset date input to today's date with timezone awareness
     if 'date_input' in st.session_state:
-        st.session_state['date_input'] = datetime.now().date()
+        st.session_state['date_input'] = datetime.now(timezone.utc).date()
     # Reset shared expense values
     if 'shared_input' in st.session_state:
         st.session_state['shared_input'] = False
@@ -278,9 +283,16 @@ def main():
                             # Amount in Rupees
                             amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
                             
-                            # Date with calendar component
-                            today = datetime.now().date()
-                            date = st.date_input("Date", value=today, key="date_input")
+                            # Date with calendar component and Today button
+                            date_col1, date_col2 = st.columns([3, 1])
+                            with date_col1:
+                                # Get current date with timezone awareness
+                                today = datetime.now(timezone.utc).date()
+                                date = st.date_input("Date", value=today, key="date_input")
+                            with date_col2:
+                                if st.button("Today", key="today_button"):
+                                    st.session_state['date_input'] = datetime.now(timezone.utc).date()
+                                    st.rerun()
                         
                         # Month and Year (auto-filled based on date)
                         month = date.strftime("%B")
