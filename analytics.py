@@ -91,16 +91,25 @@ def fetch_expense_data():
         """)
         return []
 
-def get_week_number(date_str):
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+def get_week_number(date_obj):
     return date_obj.isocalendar()[1]
 
-def get_week_label(year, week_num):
-    # Get the first day of the week (Monday)
-    first_day = datetime.strptime(f'{year}-W{week_num}-1', '%Y-W%W-%w')
-    # Get the last day of the week (Sunday)
-    last_day = first_day + timedelta(days=6)
-    return f"{first_day.strftime('%d %b')} - {last_day.strftime('%d %b')}"
+def get_day_of_month_week(date_obj):
+    """Group by the day of month, creating weekly ranges that start on the 1st"""
+    day = date_obj.day
+    # Create week ranges: 1-7, 8-14, 15-21, 22-28, 29-end of month
+    if day <= 7:
+        return "01-07"
+    elif day <= 14:
+        return "08-14"
+    elif day <= 21:
+        return "15-21"
+    elif day <= 28:
+        return "22-28"
+    else:
+        # Get the last day of the month
+        last_day = calendar.monthrange(date_obj.year, date_obj.month)[1]
+        return f"29-{last_day}"
 
 def show_analytics():
     """Main analytics function with dark theme and requested visualizations"""
@@ -122,10 +131,11 @@ def show_analytics():
             df['date'] = pd.to_datetime(df['date'])
             
             # Add week number for weekly analysis
-            df['week'] = df['date'].apply(lambda x: x.isocalendar()[1])
             df['year'] = df['date'].apply(lambda x: x.year)
             df['month'] = df['date'].apply(lambda x: x.month)
             df['month_name'] = df['date'].apply(lambda x: calendar.month_name[x.month])
+            # Create day-of-month based week ranges (1-7, 8-14, etc.)
+            df['day_week'] = df['date'].apply(get_day_of_month_week)
             
             # Get unique months for the filter
             month_options = sorted(df['month_name'].unique(), 
@@ -212,17 +222,20 @@ def show_analytics():
             selected_month_num = list(calendar.month_name).index(selected_month)
             filtered_df = df[(df['month'] == selected_month_num) & (df['year'] == selected_year)]
             
-            # Create week-category aggregation for the filtered data
-            weekly_category = filtered_df.groupby(['year', 'week', 'category'])['amount'].sum().reset_index()
+            # Create day-of-month based week aggregation for the filtered data
+            weekly_category = filtered_df.groupby(['year', 'month', 'day_week', 'category'])['amount'].sum().reset_index()
             
             if not weekly_category.empty:
-                # Create week labels and sort key for chronological ordering
-                weekly_category['week_label'] = weekly_category.apply(
-                    lambda x: get_week_label(x['year'], x['week']), axis=1
+                # Create week labels showing the day range in the month
+                weekly_category['week_label'] = weekly_category['day_week'].apply(
+                    lambda x: f"{x} {calendar.month_name[weekly_category['month'].iloc[0]][:3]}"
                 )
                 
-                # Create a sort key that combines year and week for proper chronological sorting
-                weekly_category['sort_key'] = weekly_category['year'] * 100 + weekly_category['week']
+                # Create a sort key based on the day range
+                # This assumes the day_week format is like "01-07", "08-14", etc.
+                weekly_category['sort_key'] = weekly_category['day_week'].apply(
+                    lambda x: int(x.split('-')[0])  # Sort by the first day in the range
+                )
                 
                 # Sort by the combined key for proper chronological order
                 weekly_category = weekly_category.sort_values('sort_key')
