@@ -172,20 +172,21 @@ def show_analytics():
                     today_date = now.date()
                     
                     # Calculate the number of days from first expense to today (inclusive)
-                    days_passed = (today_date - first_expense_date).days + 1
+                    # FIX: Use full date range instead of just days_passed
+                    days_in_range = (today_date - first_expense_date).days + 1
                     
                     # Safety check to avoid division by zero
-                    if days_passed < 1:
-                        days_passed = 1
+                    if days_in_range < 1:
+                        days_in_range = 1
                 else:
-                    days_passed = 1  # Default if no data
+                    days_in_range = 1  # Default if no data
                     
-                avg_daily = total_spent / days_passed if days_passed > 0 else 0
+                avg_daily = total_spent / days_in_range if days_in_range > 0 else 0
                 st.markdown(f"""
                 <div class="metric-container">
                     <div class="metric-label">Average Daily Expense</div>
                     <div class="metric-value">₹{avg_daily:,.2f}</div>
-                    <div>Based on {days_passed} days</div>
+                    <div>Based on {days_in_range} days</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -217,56 +218,51 @@ def show_analytics():
             # Add month and year filters for the weekly chart
             filter_col1, filter_col2 = st.columns([1, 1])
             
-            # FIX: Default selection should always be current month/year, even if no data exists
-            current_month_name = calendar.month_name[current_month]
-            
+            # FIX: Add "All" option for month and year filters
             with filter_col1:
-                if current_month_name not in month_options and len(month_options) > 0:
-                    selected_month = st.selectbox(
-                        "Select Month", 
-                        options=[current_month_name] + list(month_options),
-                        index=0  # Force current month to be default
-                    )
-                else:
-                    # Use the current month if it exists in the options
-                    selected_month = st.selectbox(
-                        "Select Month", 
-                        options=month_options if month_options else [current_month_name],
-                        index=month_options.index(current_month_name) if current_month_name in month_options else 0
-                    )
+                month_options_with_all = ["All"] + sorted(month_options, 
+                                  key=lambda x: list(calendar.month_name).index(x) if x in calendar.month_name else 0)
+                current_month_name = calendar.month_name[current_month]
+                
+                selected_month = st.selectbox(
+                    "Select Month", 
+                    options=month_options_with_all,
+                    index=month_options_with_all.index(current_month_name) if current_month_name in month_options_with_all else 0
+                )
             
             with filter_col2:
-                if current_year not in year_options and len(year_options) > 0:
-                    selected_year = st.selectbox(
-                        "Select Year",
-                        options=[current_year] + list(year_options),
-                        index=0  # Force current year to be default
-                    )
-                else:
-                    # Use current year if it exists in options
-                    selected_year = st.selectbox(
-                        "Select Year",
-                        options=year_options if year_options else [current_year],
-                        index=year_options.index(current_year) if current_year in year_options else 0
-                    )
+                year_options_with_all = ["All"] + sorted(year_options)
+                
+                selected_year = st.selectbox(
+                    "Select Year",
+                    options=year_options_with_all,
+                    index=year_options_with_all.index(current_year) if current_year in year_options_with_all[1:] else 0
+                )
             
             # Filter data based on selection
-            selected_month_num = list(calendar.month_name).index(selected_month)
-            filtered_df = df[(df['month'] == selected_month_num) & (df['year'] == selected_year)]
+            filtered_df = df.copy()
+            
+            # Apply month filter if not "All"
+            if selected_month != "All":
+                selected_month_num = list(calendar.month_name).index(selected_month)
+                filtered_df = filtered_df[filtered_df['month'] == selected_month_num]
+                
+            # Apply year filter if not "All"
+            if selected_year != "All":
+                filtered_df = filtered_df[filtered_df['year'] == selected_year]
             
             # Create day-of-month based week aggregation for the filtered data
             weekly_category = filtered_df.groupby(['year', 'month', 'day_week', 'category'])['amount'].sum().reset_index()
             
             if not weekly_category.empty:
                 # Create week labels showing the day range in the month
-                weekly_category['week_label'] = weekly_category['day_week'].apply(
-                    lambda x: f"{x} {calendar.month_name[weekly_category['month'].iloc[0]][:3]}"
+                weekly_category['week_label'] = weekly_category.apply(
+                    lambda x: f"{x['day_week']} {calendar.month_name[x['month']][:3]} {x['year']}", axis=1
                 )
                 
-                # Create a sort key based on the day range
-                # This assumes the day_week format is like "01-07", "08-14", etc.
-                weekly_category['sort_key'] = weekly_category['day_week'].apply(
-                    lambda x: int(x.split('-')[0])  # Sort by the first day in the range
+                # Create a sort key based on year, month, and day range
+                weekly_category['sort_key'] = weekly_category.apply(
+                    lambda x: f"{x['year']:04d}{x['month']:02d}{int(x['day_week'].split('-')[0]):02d}", axis=1
                 )
                 
                 # Sort by the combined key for proper chronological order
@@ -281,7 +277,7 @@ def show_analytics():
                     y='amount', 
                     color='category',
                     markers=True,
-                    title=f'Weekly Expenses by Category - {selected_month} {selected_year}',
+                    title=f'Weekly Expenses by Category - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
                     labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
                     category_orders={'week_label': week_labels}  # Enforce order of week labels
                 )
@@ -306,7 +302,7 @@ def show_analytics():
                 
                 st.plotly_chart(fig_weekly, use_container_width=True)
             else:
-                st.info(f"No expense data available for {selected_month} {selected_year}")
+                st.info(f"No expense data available for the selected filters")
             
             st.markdown("</div>", unsafe_allow_html=True)
             
@@ -314,8 +310,8 @@ def show_analytics():
             st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
             st.subheader("Payment Method Distribution")
             
-            # Aggregate by payment method
-            payment_totals = df.groupby('paymentMethod')['amount'].sum().reset_index()
+            # FIX: Apply same filters to payment method chart
+            payment_totals = filtered_df.groupby('paymentMethod')['amount'].sum().reset_index()
             
             # Calculate percentages
             total = payment_totals['amount'].sum()
@@ -342,6 +338,7 @@ def show_analytics():
                 paper_bgcolor='rgba(0,0,0,0)',
                 margin=dict(l=20, r=20, t=40, b=20),
                 height=500,
+                title=f'Payment Method Distribution - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
