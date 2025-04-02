@@ -164,18 +164,15 @@ def show_analytics():
                 </div>
                 """, unsafe_allow_html=True)
                 
-            # Average daily expense - FIX: Calculate date span correctly
+            # Average daily expense - FIX: Calculate based on actual expense date range
             with col2:
                 if not df_current_month.empty:
-                    # Get all unique dates that have expenses
-                    unique_dates = df_current_month['date'].dt.date.unique()
+                    # Get the earliest date with an expense this month
+                    first_expense_date = df_current_month['date'].min().date()
+                    today_date = now.date()
                     
-                    # Count the number of unique dates
-                    days_passed = len(unique_dates)
-                    
-                    # Debugging to check the dates
-                    logger.debug(f"Unique expense dates: {unique_dates}")
-                    logger.debug(f"Number of days with expenses: {days_passed}")
+                    # Calculate the number of days from first expense to today (inclusive)
+                    days_passed = (today_date - first_expense_date).days + 1
                     
                     # Safety check to avoid division by zero
                     if days_passed < 1:
@@ -365,10 +362,6 @@ def show_analytics():
                 st.write("Data shape:", df.shape)
                 if not df.empty:
                     st.write("Date range:", df['date'].min(), "to", df['date'].max())
-                    # Add detailed date debugging info for current month
-                    if not df_current_month.empty:
-                        st.write("Current month unique dates:", df_current_month['date'].dt.date.unique())
-                        st.write("Number of days with expenses:", len(df_current_month['date'].dt.date.unique()))
                     
     except Exception as e:
         logger.error(f"💣 Analytics failure: {str(e)}", exc_info=True)
