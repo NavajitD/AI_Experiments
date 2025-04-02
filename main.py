@@ -53,12 +53,14 @@ def predict_category(expense_name):
 def handle_form_submit():
     st.session_state['form_submitted'] = True
 
-# Function to reset the form
 def reset_form():
     st.session_state['reset_form'] = True
     st.session_state['predicted_category'] = ""
     st.session_state['category_predicted'] = ""
     st.session_state['form_submitted'] = False
+    # Reset date input to today's date
+    if 'date_input' in st.session_state:
+        st.session_state['date_input'] = datetime.now().date()
     # We can't directly set expense_name_input, but we'll use reset_form flag
     # to handle this in the UI
 
