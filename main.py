@@ -13,7 +13,7 @@ import analytics
 # Rest of your imports
 import requests
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
@@ -34,11 +34,11 @@ if 'shared_percentage' not in st.session_state:
     st.session_state['shared_percentage'] = 50.0
 if 'shared_amount' not in st.session_state:
     st.session_state['shared_amount'] = 0.0
-
-# Always set date to current date on page refresh
-# Using local time without timezone to match the device's date
-if 'date_input' not in st.session_state:
-    st.session_state['date_input'] = datetime.now().date()
+# Force current date on every app load
+if 'force_current_date' not in st.session_state or st.session_state['force_current_date'] != datetime.now().date():
+    if 'date_input' in st.session_state:
+        st.session_state['date_input'] = datetime.now().date()
+    st.session_state['force_current_date'] = datetime.now().date()
 
 # Callback for expense name change
 def on_expense_name_change():
@@ -83,10 +83,9 @@ def reset_form():
     st.session_state['predicted_category'] = ""
     st.session_state['category_predicted'] = ""
     st.session_state['form_submitted'] = False
-    
-    # Reset date input to today's date without timezone
-    st.session_state['date_input'] = datetime.now().date()
-    
+    # Reset date input to today's date with timezone awareness
+    if 'date_input' in st.session_state:
+        st.session_state['date_input'] = datetime.now(timezone.utc).date()
     # Reset shared expense values
     if 'shared_input' in st.session_state:
         st.session_state['shared_input'] = False
@@ -287,10 +286,12 @@ def main():
                             # Date with calendar component and Today button
                             date_col1, date_col2 = st.columns([3, 1])
                             with date_col1:
-                                date = st.date_input("Date", value=st.session_state['date_input'], key="date_input")
+                                # Get current date with timezone awareness
+                                today = datetime.now(timezone.utc).date()
+                                date = st.date_input("Date", value=today, key="date_input")
                             with date_col2:
                                 if st.button("Today", key="today_button"):
-                                    st.session_state['date_input'] = datetime.now().date()
+                                    st.session_state['date_input'] = datetime.now(timezone.utc).date()
                                     st.rerun()
                         
                         # Month and Year (auto-filled based on date)
@@ -308,7 +309,7 @@ def main():
                         else:
                             billing_cycle = ""
                         
-                        # Shared expense checkbox
+                        # Shared expense
                         shared = st.checkbox("Shared expense", value=False, key="shared_input")
                         
                         # Show additional fields if shared expense is checked
@@ -316,11 +317,10 @@ def main():
                             shared_col1, shared_col2 = st.columns(2)
                             
                             with shared_col1:
-                                # Percentage input with validation
                                 shared_percentage = st.number_input(
                                     "Your share (%)", 
-                                    min_value=0.1, 
-                                    max_value=99.9, 
+                                    min_value=0.0, 
+                                    max_value=100.0, 
                                     value=50.0, 
                                     step=0.1, 
                                     format="%.1f",
@@ -329,13 +329,11 @@ def main():
                                 )
                             
                             with shared_col2:
-                                # Shared amount input with validation
-                                max_amount = float(amount) if amount else 0.0
                                 shared_amount = st.number_input(
                                     "Your amount (₹)", 
-                                    min_value=0.01 if max_amount > 0 else 0.0, 
-                                    max_value=max_amount - 0.01 if max_amount > 0.01 else 0.0,
-                                    value=min(amount * 0.5 if amount else 0.0, max_amount - 0.01 if max_amount > 0.01 else 0.0),
+                                    min_value=0.0, 
+                                    max_value=float(amount) if amount else 0.0,
+                                    value=amount * 0.5 if amount else 0.0,
                                     step=0.01, 
                                     format="%.2f",
                                     key="shared_amount_input",
@@ -364,7 +362,6 @@ def main():
                         # Calculate the final amount to submit
                         final_amount = st.session_state['amount_input']
                         if st.session_state['shared_input']:
-                            # Prioritize split amount over percentage
                             final_amount = st.session_state['shared_amount_input']
                         
                         # Prepare data for submission
