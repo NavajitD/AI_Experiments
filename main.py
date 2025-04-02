@@ -30,6 +30,10 @@ if 'form_submitted' not in st.session_state:
     st.session_state['form_submitted'] = False
 if 'reset_form' not in st.session_state:
     st.session_state['reset_form'] = False
+if 'shared_percentage' not in st.session_state:
+    st.session_state['shared_percentage'] = 50.0
+if 'shared_amount' not in st.session_state:
+    st.session_state['shared_amount'] = 0.0
 
 # Callback for expense name change
 def on_expense_name_change():
@@ -53,6 +57,22 @@ def predict_category(expense_name):
 def handle_form_submit():
     st.session_state['form_submitted'] = True
 
+# Calculate shared amount based on percentage
+def calculate_shared_amount():
+    if 'amount_input' in st.session_state and 'shared_percentage_input' in st.session_state:
+        total_amount = st.session_state['amount_input']
+        percentage = st.session_state['shared_percentage_input']
+        st.session_state['shared_amount_input'] = round(total_amount * percentage / 100, 2)
+
+# Calculate shared percentage based on amount
+def calculate_shared_percentage():
+    if 'amount_input' in st.session_state and 'shared_amount_input' in st.session_state:
+        total_amount = st.session_state['amount_input']
+        shared_amount = st.session_state['shared_amount_input']
+        if total_amount > 0:
+            st.session_state['shared_percentage_input'] = round(shared_amount / total_amount * 100, 2)
+
+# Function to reset the form
 def reset_form():
     st.session_state['reset_form'] = True
     st.session_state['predicted_category'] = ""
@@ -61,6 +81,13 @@ def reset_form():
     # Reset date input to today's date
     if 'date_input' in st.session_state:
         st.session_state['date_input'] = datetime.now().date()
+    # Reset shared expense values
+    if 'shared_input' in st.session_state:
+        st.session_state['shared_input'] = False
+    if 'shared_percentage_input' in st.session_state:
+        st.session_state['shared_percentage_input'] = 50.0
+    if 'shared_amount_input' in st.session_state:
+        st.session_state['shared_amount_input'] = 0.0
     # We can't directly set expense_name_input, but we'll use reset_form flag
     # to handle this in the UI
 
@@ -272,6 +299,41 @@ def main():
                         
                         # Shared expense
                         shared = st.checkbox("Shared expense", value=False, key="shared_input")
+                        
+                        # Show additional fields if shared expense is checked
+                        if shared:
+                            shared_col1, shared_col2 = st.columns(2)
+                            
+                            with shared_col1:
+                                shared_percentage = st.number_input(
+                                    "Your share (%)", 
+                                    min_value=0.0, 
+                                    max_value=100.0, 
+                                    value=50.0, 
+                                    step=0.1, 
+                                    format="%.1f",
+                                    key="shared_percentage_input",
+                                    on_change=calculate_shared_amount
+                                )
+                            
+                            with shared_col2:
+                                shared_amount = st.number_input(
+                                    "Your amount (₹)", 
+                                    min_value=0.0, 
+                                    max_value=float(amount) if amount else 0.0,
+                                    value=amount * 0.5 if amount else 0.0,
+                                    step=0.01, 
+                                    format="%.2f",
+                                    key="shared_amount_input",
+                                    on_change=calculate_shared_percentage
+                                )
+                                
+                            # Display the calculated amount that will be submitted
+                            st.markdown(f"""
+                            <div class="info-box">
+                                <strong>Amount to record:</strong> ₹{shared_amount:.2f} ({shared_percentage:.1f}% of ₹{amount:.2f})
+                            </div>
+                            """, unsafe_allow_html=True)
                 
                         # Submit button with callback
                         submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
@@ -285,16 +347,23 @@ def main():
                         st.error("Amount must be greater than 0.")
                         st.session_state['form_submitted'] = False
                     else:
+                        # Calculate the final amount to submit
+                        final_amount = st.session_state['amount_input']
+                        if st.session_state['shared_input']:
+                            final_amount = st.session_state['shared_amount_input']
+                        
                         # Prepare data for submission
                         data = {
                             "expenseName": expense_name,
                             "category": st.session_state['category_input'],
-                            "amount": st.session_state['amount_input'],
+                            "amount": final_amount,  # Use the shared amount if applicable
+                            "originalAmount": st.session_state['amount_input'],  # Store the original amount
                             "date": st.session_state['date_input'].strftime("%Y-%m-%d"),
                             "month": st.session_state['date_input'].strftime("%B"),
                             "year": st.session_state['date_input'].year,
                             "paymentMethod": st.session_state['payment_method_input'],
                             "shared": "Yes" if st.session_state['shared_input'] else "No",
+                            "sharedPercentage": st.session_state['shared_percentage_input'] if st.session_state['shared_input'] else 100,
                             "billingCycle": billing_cycle if st.session_state['payment_method_input'] == "Credit card" else "",
                             "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
