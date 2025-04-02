@@ -248,6 +248,7 @@ def main():
                     st.markdown("""
                     <div class="glass-card">
                         <h3 class="title-font">New Expense</h3>
+                    </div>
                     """, unsafe_allow_html=True)
                     
                     # Expense name input with on_change callback
@@ -268,85 +269,121 @@ def main():
                     default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
                     default_index = categories.index(default_category) if default_category in categories else 0
                     
-                    # Form for the rest of the inputs
-                    with st.form(key="expense_form"):
-                        col1, col2 = st.columns(2)
+                    # Create layout columns before the form
+                    input_col1, input_col2 = st.columns(2)
+                    
+                    with input_col1:
+                        category_input = st.selectbox(
+                            "Category", 
+                            categories, 
+                            index=default_index, 
+                            key="category_input_outside_form"
+                        )
                         
-                        with col1:
-                            category = st.selectbox("Category", categories, index=default_index, key="category_input")
+                        # Payment method
+                        payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
+                        payment_method_input = st.selectbox(
+                            "Payment method", 
+                            payment_methods, 
+                            key="payment_method_input_outside_form"
+                        )
+                    
+                    with input_col2:
+                        # Amount in Rupees
+                        amount_input = st.number_input(
+                            "Amount (₹)", 
+                            min_value=0.0, 
+                            step=0.01, 
+                            format="%.2f", 
+                            key="amount_input_outside_form"
+                        )
+                        
+                        # Date input
+                        date_cols = st.columns([3, 1])
+                        with date_cols[0]:
+                            # Get current date with timezone awareness
+                            today = datetime.now(timezone.utc).date()
+                            date_input = st.date_input("Date", value=today, key="date_input_outside_form")
+                        with date_cols[1]:
+                            if st.button("Today", key="today_button_outside_form"):
+                                st.session_state['date_input_outside_form'] = datetime.now(timezone.utc).date()
+                                st.rerun()
+                    
+                    # Month and Year (auto-filled based on date)
+                    month = date_input.strftime("%B")
+                    year = date_input.year
+                    
+                    # Billing cycle (if Credit Card is selected)
+                    if payment_method_input == "Credit card":
+                        billing_cycle = get_billing_cycle(date_input)
+                        st.markdown(f"""
+                        <div class="info-box">
+                            <strong>Billing Cycle:</strong> {billing_cycle}
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        billing_cycle = ""
+                    
+                    # Shared expense
+                    shared_input = st.checkbox("Shared expense", value=False, key="shared_input_outside_form")
+                    
+                    # Show additional fields if shared expense is checked
+                    if shared_input:
+                        shared_cols = st.columns(2)
+                        
+                        with shared_cols[0]:
+                            shared_percentage_input = st.number_input(
+                                "Your share (%)", 
+                                min_value=0.0, 
+                                max_value=100.0, 
+                                value=50.0, 
+                                step=0.1, 
+                                format="%.1f",
+                                key="shared_percentage_input_outside_form",
+                                # Calculate shared amount when percentage changes
+                                on_change=lambda: setattr(
+                                    st.session_state, 
+                                    'shared_amount_input_outside_form', 
+                                    round(st.session_state.amount_input_outside_form * st.session_state.shared_percentage_input_outside_form / 100, 2)
+                                ) if 'amount_input_outside_form' in st.session_state else None
+                            )
+                        
+                        with shared_cols[1]:
+                            shared_amount_input = st.number_input(
+                                "Your amount (₹)", 
+                                min_value=0.0, 
+                                max_value=float(amount_input) if amount_input else 0.0,
+                                value=amount_input * 0.5 if amount_input else 0.0,
+                                step=0.01, 
+                                format="%.2f",
+                                key="shared_amount_input_outside_form",
+                                # Calculate percentage when amount changes
+                                on_change=lambda: setattr(
+                                    st.session_state,
+                                    'shared_percentage_input_outside_form',
+                                    round(st.session_state.shared_amount_input_outside_form / st.session_state.amount_input_outside_form * 100, 2)
+                                ) if 'amount_input_outside_form' in st.session_state and st.session_state.amount_input_outside_form > 0 else None
+                            )
                             
-                            # Payment method
-                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
-                            payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
+                        # Display the calculated amount that will be submitted
+                        st.markdown(f"""
+                        <div class="info-box">
+                            <strong>Amount to record:</strong> ₹{shared_amount_input:.2f} ({shared_percentage_input:.1f}% of ₹{amount_input:.2f})
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Now use a form just for the submit button
+                    with st.form(key="expense_submit_form"):
+                        # Hidden fields to carry values from outside the form
+                        # These don't need to be visible but will be submitted with the form
+                        st.session_state['category_input'] = st.session_state.get('category_input_outside_form', default_category)
+                        st.session_state['payment_method_input'] = st.session_state.get('payment_method_input_outside_form', payment_methods[0])
+                        st.session_state['amount_input'] = st.session_state.get('amount_input_outside_form', 0.0)
+                        st.session_state['date_input'] = st.session_state.get('date_input_outside_form', today)
+                        st.session_state['shared_input'] = st.session_state.get('shared_input_outside_form', False)
+                        st.session_state['shared_percentage_input'] = st.session_state.get('shared_percentage_input_outside_form', 50.0)
+                        st.session_state['shared_amount_input'] = st.session_state.get('shared_amount_input_outside_form', 0.0)
                         
-                        with col2:
-                            # Amount in Rupees
-                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
-                            
-                            # Date with calendar component and Today button
-                            date_col1, date_col2 = st.columns([3, 1])
-                            with date_col1:
-                                # Get current date with timezone awareness
-                                today = datetime.now(timezone.utc).date()
-                                date = st.date_input("Date", value=today, key="date_input")
-                            with date_col2:
-                                if st.button("Today", key="today_button"):
-                                    st.session_state['date_input'] = datetime.now(timezone.utc).date()
-                                    st.rerun()
-                        
-                        # Month and Year (auto-filled based on date)
-                        month = date.strftime("%B")
-                        year = date.year
-                        
-                        # Billing cycle (if Credit Card is selected)
-                        if payment_method == "Credit card":
-                            billing_cycle = get_billing_cycle(date)
-                            st.markdown(f"""
-                            <div class="info-box">
-                                <strong>Billing Cycle:</strong> {billing_cycle}
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            billing_cycle = ""
-                        
-                        # Shared expense
-                        shared = st.checkbox("Shared expense", value=False, key="shared_input")
-                        
-                        # Show additional fields if shared expense is checked
-                        if shared:
-                            shared_col1, shared_col2 = st.columns(2)
-                            
-                            with shared_col1:
-                                shared_percentage = st.number_input(
-                                    "Your share (%)", 
-                                    min_value=0.0, 
-                                    max_value=100.0, 
-                                    value=50.0, 
-                                    step=0.1, 
-                                    format="%.1f",
-                                    key="shared_percentage_input",
-                                    on_change=calculate_shared_amount
-                                )
-                            
-                            with shared_col2:
-                                shared_amount = st.number_input(
-                                    "Your amount (₹)", 
-                                    min_value=0.0, 
-                                    max_value=float(amount) if amount else 0.0,
-                                    value=amount * 0.5 if amount else 0.0,
-                                    step=0.01, 
-                                    format="%.2f",
-                                    key="shared_amount_input",
-                                    on_change=calculate_shared_percentage
-                                )
-                                
-                            # Display the calculated amount that will be submitted
-                            st.markdown(f"""
-                            <div class="info-box">
-                                <strong>Amount to record:</strong> ₹{shared_amount:.2f} ({shared_percentage:.1f}% of ₹{amount:.2f})
-                            </div>
-                            """, unsafe_allow_html=True)
-                
                         # Submit button with callback
                         submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
                 
@@ -398,7 +435,11 @@ def main():
 
     with tab2:
         # Create analytics view
-        analytics.show_analytics()
+        try:
+            analytics.show_analytics()
+        except Exception as e:
+            st.error(f"Error loading analytics: {str(e)}")
+            st.info("Please check that the analytics.py file exists and is properly configured.")
     
     with tab3:
         st.header("Debug Information")
