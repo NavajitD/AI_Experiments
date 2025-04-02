@@ -169,13 +169,17 @@ def show_analytics():
                 if not df_current_month.empty:
                     # Get the earliest date with an expense this month
                     first_expense_date = df_current_month['date'].min().date()
+                    
+                    # For the end date, use the latest transaction date instead of today
+                    # This ensures we count all days with transactions
+                    last_expense_date = df_current_month['date'].max().date()
                     today_date = now.date()
                     
-                    # Calculate the number of days from first expense to today (inclusive)
-                    # FIX: Use full date range instead of just days_passed
-                    days_in_range = (today_date - first_expense_date).days + 1
+                    # Calculate inclusive date range (first day to last day inclusive)
+                    # Add 1 to include both start and end dates in the count
+                    days_in_range = (last_expense_date - first_expense_date).days + 1
                     
-                    # Safety check to avoid division by zero
+                    # Safety check to avoid division by zero and ensure minimum of 1 day
                     if days_in_range < 1:
                         days_in_range = 1
                 else:
@@ -294,10 +298,10 @@ def show_analytics():
                     autosize=True,
                 )
                 
-                # Make the chart more mobile-friendly
+                # Make the chart more mobile-friendly with bigger dots and thinner lines
                 fig_weekly.update_traces(
-                    line=dict(width=2),
-                    marker=dict(size=8)
+                    line=dict(width=1),  # Thinner lines
+                    marker=dict(size=12)  # Bigger dots
                 )
                 
                 st.plotly_chart(fig_weekly, use_container_width=True)
