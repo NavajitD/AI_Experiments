@@ -271,27 +271,24 @@ def main():
                     
                     # Form for the rest of the inputs
                     with st.form(key="expense_form"):
-                        col1, col2 = st.columns(2)
+                        # Create all form elements first
+                        form_col1, form_col2 = st.columns(2)
                         
-                        with col1:
+                        with form_col1:
                             category = st.selectbox("Category", categories, index=default_index, key="category_input")
                             
                             # Payment method
                             payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
                             payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
                         
-                        with col2:
+                        with form_col2:
                             # Amount in Rupees
                             amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
                             
-                            # Date with calendar component and Today button
-                            date_col1, date_col2 = st.columns([3, 1])
-                            with date_col1:
-                                date = st.date_input("Date", value=st.session_state['date_input'], key="date_input")
-                            with date_col2:
-                                if st.button("Today", key="today_button"):
-                                    st.session_state['date_input'] = datetime.now().date()
-                                    st.rerun()
+                            # Date with calendar component
+                            date = st.date_input("Date", value=st.session_state['date_input'], key="date_input")
+                            
+                            # Today button must be outside the form to avoid nested elements error
                         
                         # Month and Year (auto-filled based on date)
                         month = date.strftime("%B")
@@ -351,6 +348,11 @@ def main():
                 
                         # Submit button with callback
                         submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
+                
+                # Today button - moved outside the form to avoid nested elements error
+                if st.button("Today", key="today_button"):
+                    st.session_state['date_input'] = datetime.now().date()
+                    st.rerun()
                 
                 # Handle form submission outside the form
                 if st.session_state['form_submitted']:
