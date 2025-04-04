@@ -254,18 +254,61 @@ def main():
                     default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
                     default_index = categories.index(default_category) if default_category in categories else 0
                     
-                    # Shared expense checkbox OUTSIDE the form to allow immediate interaction
+                    # Form for the inputs
+                    with st.form(key="expense_form"):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            category = st.selectbox("Category", categories, index=default_index, key="category_input")
+                            
+                            # Payment method
+                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
+                            payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
+                        
+                        with col2:
+                            # Amount in Rupees - INSIDE THE FORM BOX
+                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+                            
+                            # Date with calendar component
+                            today = datetime.now().date()
+                            date = st.date_input("Date", value=today, key="date_input")
+                        
+                        # Month and Year (auto-filled based on date)
+                        month = date.strftime("%B")
+                        year = date.year
+                        
+                        # Billing cycle (if Credit Card is selected)
+                        if payment_method == "Credit card":
+                            billing_cycle = get_billing_cycle(date)
+                            st.markdown(f"""
+                            <div class="info-box">
+                                <strong>Billing Cycle:</strong> {billing_cycle}
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            billing_cycle = ""
+                            
+                        # Submit button with callback
+                        submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
+                    
+                    # Shared expense checkbox OUTSIDE & BELOW the form
                     shared = st.checkbox("Shared expense", value=False, key="shared_input")
                     
-                    # Show split options immediately if shared expense is checked
-                    split_between = 2  # Default value
-                    split_amount = 0.0  # Default value
+                    # Function to update split amount when split between changes
+                    def update_split_amount():
+                        current_amount = st.session_state.get('amount_input', 0.0)
+                        current_split_between = st.session_state.get('split_between_input', 2)
+                        
+                        if current_amount > 0 and current_split_between > 0:
+                            new_split_amount = round(current_amount / current_split_between, 2)
+                            st.session_state['split_amount_input'] = new_split_amount
                     
+                    # Show split options immediately if shared expense is checked
                     if shared:
                         split_col1, split_col2 = st.columns(2)
                         
                         with split_col1:
-                            # Only allow natural numbers for split between
+                            # Only allow natural numbers for split between, with on_change callback
                             split_between = st.number_input(
                                 "Split between (number of people)", 
                                 min_value=1, 
@@ -273,7 +316,8 @@ def main():
                                 value=2, 
                                 step=1,
                                 help="Enter the total number of people sharing this expense",
-                                key="split_between_input"
+                                key="split_between_input",
+                                on_change=update_split_amount
                             )
                         
                         # Get the current amount value from session state for calculation
@@ -287,7 +331,7 @@ def main():
                                 "Split amount (your share in ₹)", 
                                 min_value=0.0, 
                                 max_value=float(current_amount) if current_amount > 0 else 1000000.0,
-                                value=default_split,
+                                value=st.session_state.get('split_amount_input', default_split),
                                 step=0.01,
                                 format="%.2f",
                                 help="Enter your portion of the expense (this will override the split calculation)",
@@ -300,25 +344,6 @@ def main():
                         elif split_between > 1 and current_amount > 0:
                             calculated_amount = current_amount / split_between
                             st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{calculated_amount:.2f}")
-                    
-                    # Form for the remaining inputs
-                    with st.form(key="expense_form"):
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            category = st.selectbox("Category", categories, index=default_index, key="category_input")
-                            
-                            # Payment method
-                            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
-                            payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
-                        
-                        with col2:
-                            # Amount in Rupees - MOVED BACK INSIDE THE FORM
-                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
-                            
-                            # Date with calendar component
-                            today = datetime.now().date()
-                            date = st.date_input("Date", value=today, key="date_input")
                         
                         # Month and Year (auto-filled based on date)
                         month = date.strftime("%B")
