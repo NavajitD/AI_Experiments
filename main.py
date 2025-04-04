@@ -90,7 +90,6 @@ def get_category_prediction(expense_name):
         - Gift
         - Cinema
         - Entertainment
-        - Liquor
         - Rent/Maintenance
         - Furniture
         - Services
@@ -102,7 +101,6 @@ def get_category_prediction(expense_name):
         - Flights
         - Travel
         - Clothes
-        - Games/Sports
         - Gas
         - Phone
         
@@ -228,8 +226,8 @@ def main():
                     # All possible categories
                     categories = [
                         "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
-                        "Cinema", "Entertainment", "Liquor", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
-                        "Medical expenses", "Flights", "Travel", "Clothes", "Games/Sports", "Gas", "Phone", "Miscellaneous"
+                        "Cinema", "Entertainment", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
+                        "Medical expenses", "Flights", "Travel", "Clothes", "Gas", "Phone", "Miscellaneous"
                     ]
                     
                     # Default to predicted category if available
