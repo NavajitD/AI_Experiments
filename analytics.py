@@ -240,6 +240,9 @@ def show_analytics():
                     </div>
                     """, unsafe_allow_html=True)
             
+            # Add space before filters
+            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+            
             # Add filters without header
             filter_col1, filter_col2 = st.columns([1, 1])
             
