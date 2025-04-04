@@ -60,6 +60,27 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Define expense theme categorization
+def categorize_theme(category):
+    """Map each expense category to its theme"""
+    cost_of_living = ['Bike', 'Public transport', 'Groceries', 'Household supplies', 
+                      'Rent/Maintenance', 'Furniture', 'Services', 'Electricity', 
+                      'Internet', 'Insurance', 'Medical expenses', 'Gas', 'Phone']
+    
+    going_out = ['Auto/Cab', 'Eating out', 'Party', 'Cinema', 'Entertainment', 
+                'Liquor', 'Travel', 'Games/Sports']
+    
+    incidentals = ['Education', 'Gift', 'Investment', 'Flights', 'Clothes']
+    
+    if category in cost_of_living:
+        return "Cost of living"
+    elif category in going_out:
+        return "Going out"
+    elif category in incidentals:
+        return "Incidentals"
+    else:
+        return "Other"
+
 def fetch_expense_data():
     try:
         response = requests.get(FETCH_SCRIPT_URL, timeout=10)
@@ -136,6 +157,9 @@ def show_analytics():
             df['month_name'] = df['date'].apply(lambda x: calendar.month_name[x.month])
             # Create day-of-month based week ranges (1-7, 8-14, etc.)
             df['day_week'] = df['date'].apply(get_day_of_month_week)
+            
+            # Add expense theme categorization
+            df['theme'] = df['category'].apply(categorize_theme)
             
             # Get unique months for the filter
             month_options = sorted(df['month_name'].unique(), 
@@ -355,6 +379,84 @@ def show_analytics():
             )
             
             st.plotly_chart(fig_donut, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+            # 4. NEW: Pie chart of expense themes
+            st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
+            st.subheader("Expense Distribution by Theme")
+            
+            # Aggregate expenses by theme
+            theme_totals = filtered_df.groupby('theme')['amount'].sum().reset_index()
+            
+            # Calculate percentages
+            theme_total = theme_totals['amount'].sum()
+            theme_totals['percentage'] = (theme_totals['amount'] / theme_total * 100).round(1)
+            
+            # Add percentage to labels
+            theme_totals['label'] = theme_totals.apply(
+                lambda x: f"{x['theme']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
+            )
+            
+            # Define custom colors for each theme
+            theme_colors = {
+                "Cost of living": "#4CAF50",  # Green
+                "Going out": "#FF9800",       # Orange
+                "Incidentals": "#2196F3",     # Blue
+                "Other": "#9E9E9E"            # Grey
+            }
+            
+            # Extract colors in the same order as themes
+            color_sequence = [theme_colors.get(theme, "#9E9E9E") for theme in theme_totals['theme']]
+            
+            # Create pie chart for themes
+            fig_theme = go.Figure(data=[go.Pie(
+                labels=theme_totals['label'],
+                values=theme_totals['amount'],
+                hole=0.4,
+                textinfo='percent',
+                marker_colors=color_sequence
+            )])
+            
+            # Add detail about which categories are in each theme
+            theme_details = {
+                "Cost of living": "Bike, Public transport, Groceries, Household supplies, Rent/Maintenance, Furniture, Services, Electricity, Internet, Insurance, Medical expenses, Gas, Phone",
+                "Going out": "Auto/Cab, Eating out, Party, Cinema, Entertainment, Liquor, Travel, Games/Sports",
+                "Incidentals": "Education, Gift, Investment, Flights, Clothes"
+            }
+            
+            theme_annotation = "<br>".join([f"<b>{theme}:</b> {categories}" for theme, categories in theme_details.items()])
+            
+            # Customize the theme to match dark mode and improve mobile responsiveness
+            fig_theme.update_layout(
+                template='plotly_dark',
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=20, r=20, t=40, b=20),
+                height=500,
+                title=f'Expense Themes - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=-0.3,
+                    xanchor="center",
+                    x=0.5
+                ),
+                # Improve responsiveness
+                autosize=True,
+            )
+            
+            st.plotly_chart(fig_theme, use_container_width=True)
+            
+            # Add theme category details as an expander
+            with st.expander("Theme Categories", expanded=False):
+                st.markdown(f"""
+                <div style='margin: 10px 0;'>
+                    <p><b>Cost of living:</b> Bike, Public transport, Groceries, Household supplies, Rent/Maintenance, Furniture, Services, Electricity, Internet, Insurance, Medical expenses, Gas, Phone</p>
+                    <p><b>Going out:</b> Auto/Cab, Eating out, Party, Cinema, Entertainment, Liquor, Travel, Games/Sports</p>
+                    <p><b>Incidentals:</b> Education, Gift, Investment, Flights, Clothes</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
             st.markdown("</div>", unsafe_allow_html=True)
             
             # Add expander for debugging data
