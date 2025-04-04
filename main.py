@@ -198,6 +198,12 @@ def toggle_split_options():
     if st.session_state.shared_input:
         update_split_amount()
 
+# Callback for when amount changes
+def on_amount_change():
+    # Update split amount if shared expense is checked
+    if st.session_state.get('shared_input', False):
+        update_split_amount()
+
 # Main app function
 def main():
     # Hide the debug outputs by default
@@ -291,8 +297,8 @@ def main():
                             payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
                         
                         with col2:
-                            # Amount in Rupees - INSIDE THE FORM BOX
-                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+                            # Amount in Rupees - INSIDE THE FORM BOX with callback for shared expense calculation
+                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input", on_change=on_amount_change)
                             
                             # Date with calendar component
                             today = datetime.now().date()
@@ -358,7 +364,10 @@ def main():
                         else:
                             billing_cycle = ""
                         
-                        # Submit button
+                        # Add a spacer before the submit button
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        
+                        # Submit button at the very end of the form
                         submitted = st.form_submit_button("Add expense")
                 
                 # Handle form submission
