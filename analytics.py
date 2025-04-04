@@ -60,6 +60,27 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Define expense theme categorization
+def categorize_theme(category):
+    """Map each expense category to its theme"""
+    cost_of_living = ['Bike', 'Public transport', 'Groceries', 'Household supplies', 
+                      'Rent/Maintenance', 'Furniture', 'Services', 'Electricity', 
+                      'Internet', 'Insurance', 'Medical expenses', 'Gas', 'Phone']
+    
+    going_out = ['Auto/Cab', 'Eating out', 'Party', 'Cinema', 'Entertainment', 
+                'Liquor', 'Travel', 'Games/Sports']
+    
+    incidentals = ['Education', 'Gift', 'Investment', 'Flights', 'Clothes']
+    
+    if category in cost_of_living:
+        return "Cost of living"
+    elif category in going_out:
+        return "Going out"
+    elif category in incidentals:
+        return "Incidentals"
+    else:
+        return "Other"
+
 def fetch_expense_data():
     try:
         response = requests.get(FETCH_SCRIPT_URL, timeout=10)
@@ -115,6 +136,7 @@ def show_analytics():
     """Main analytics function with dark theme and requested visualizations"""
     try:
         st.title("💰 Expense Analytics Dashboard")
+        st.caption("Track and analyze your spending patterns")
         
         with st.spinner("🔍 Loading financial insights..."):
             raw_data = fetch_expense_data()
@@ -136,6 +158,9 @@ def show_analytics():
             df['month_name'] = df['date'].apply(lambda x: calendar.month_name[x.month])
             # Create day-of-month based week ranges (1-7, 8-14, etc.)
             df['day_week'] = df['date'].apply(get_day_of_month_week)
+            
+            # Add expense theme categorization
+            df['theme'] = df['category'].apply(categorize_theme)
             
             # Get unique months for the filter
             month_options = sorted(df['month_name'].unique(), 
@@ -215,14 +240,13 @@ def show_analytics():
                     </div>
                     """, unsafe_allow_html=True)
             
-            # 2. Week-wise graph of amount spent per category with month filter
-            st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-            st.subheader("Weekly Expense Trends by Category")
+            # Add space before filters
+            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
             
-            # Add month and year filters for the weekly chart
+            # Add filters without header
             filter_col1, filter_col2 = st.columns([1, 1])
             
-            # FIX: Add "All" option for month and year filters
+            # Add "All" option for month and year filters
             with filter_col1:
                 month_options_with_all = ["All"] + sorted(month_options, 
                                   key=lambda x: list(calendar.month_name).index(x) if x in calendar.month_name else 0)
@@ -271,91 +295,173 @@ def show_analytics():
                 
                 # Sort by the combined key for proper chronological order
                 weekly_category = weekly_category.sort_values('sort_key')
-                
-                # Create the line chart with Plotly using category_orders to enforce order
-                week_labels = weekly_category['week_label'].unique()
-                
-                fig_weekly = px.line(
-                    weekly_category, 
-                    x='week_label', 
-                    y='amount', 
-                    color='category',
-                    markers=True,
-                    title=f'Weekly Expenses by Category - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
-                    labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
-                    category_orders={'week_label': week_labels}  # Enforce order of week labels
-                )
-                
-                # Customize the theme to match dark mode and improve mobile responsiveness
-                fig_weekly.update_layout(
-                    template='plotly_dark',
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    legend=dict(orientation='h', yanchor='bottom', y=-0.3, xanchor='center', x=0.5),
-                    margin=dict(l=20, r=20, t=40, b=20),
-                    height=500,
-                    # Improve responsiveness
-                    autosize=True,
-                )
-                
-                # Make the chart more mobile-friendly with bigger dots and thinner lines
-                fig_weekly.update_traces(
-                    line=dict(width=1),  # Thinner lines
-                    marker=dict(size=12)  # Bigger dots
-                )
-                
-                st.plotly_chart(fig_weekly, use_container_width=True)
-            else:
-                st.info(f"No expense data available for the selected filters")
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # 3. Donut chart of spend distribution by payment methods
-            st.markdown("<div class='chart-container'>", unsafe_allow_html=True)
-            st.subheader("Payment Method Distribution")
+            # Add some space before the trends section
+            st.markdown("<br>", unsafe_allow_html=True)
             
-            # FIX: Apply same filters to payment method chart
-            payment_totals = filtered_df.groupby('paymentMethod')['amount'].sum().reset_index()
+
             
-            # Calculate percentages
-            total = payment_totals['amount'].sum()
-            payment_totals['percentage'] = (payment_totals['amount'] / total * 100).round(1)
+            # Trends section header
+            st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
+            st.header("📊 Expense Trends")
             
-            # Add percentage to labels
-            payment_totals['label'] = payment_totals.apply(
-                lambda x: f"{x['paymentMethod']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
-            )
+            # Create sub-tabs for different trend visualizations
+            trend_tabs = st.tabs(["Weekly Category Trends", "Payment Methods", "Expense Themes"])
             
-            # Create donut chart
-            fig_donut = go.Figure(data=[go.Pie(
-                labels=payment_totals['label'],
-                values=payment_totals['amount'],
-                hole=0.5,
-                textinfo='percent',
-                marker_colors=px.colors.qualitative.Set3
-            )])
+            with trend_tabs[0]:
+                # 2. Week-wise graph of amount spent per category (original line chart)
+                if not weekly_category.empty:
+                    # Create the line chart with Plotly using category_orders to enforce order
+                    week_labels = weekly_category['week_label'].unique()
+                    
+                    fig_weekly = px.line(
+                        weekly_category, 
+                        x='week_label', 
+                        y='amount', 
+                        color='category',
+                        markers=True,
+                        title=f'Weekly Expenses by Category - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
+                        labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
+                        category_orders={'week_label': week_labels}  # Enforce order of week labels
+                    )
+                    
+                    # Customize the theme to match dark mode and improve mobile responsiveness
+                    fig_weekly.update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        legend=dict(orientation='h', yanchor='bottom', y=-0.3, xanchor='center', x=0.5),
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        height=500,
+                        # Improve responsiveness
+                        autosize=True,
+                    )
+                    
+                    # Make the chart more mobile-friendly with bigger dots and thinner lines
+                    fig_weekly.update_traces(
+                        line=dict(width=1),  # Thinner lines
+                        marker=dict(size=12)  # Bigger dots
+                    )
+                    
+                    st.plotly_chart(fig_weekly, use_container_width=True)
+                else:
+                    st.info(f"No expense data available for the selected filters")
+                
+            with trend_tabs[1]:
+                # 3. Donut chart of spend distribution by payment methods
+                if not filtered_df.empty:
+                    payment_totals = filtered_df.groupby('paymentMethod')['amount'].sum().reset_index()
+                    
+                    # Calculate percentages
+                    total = payment_totals['amount'].sum()
+                    payment_totals['percentage'] = (payment_totals['amount'] / total * 100).round(1)
+                    
+                    # Add percentage to labels
+                    payment_totals['label'] = payment_totals.apply(
+                        lambda x: f"{x['paymentMethod']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
+                    )
+                    
+                    # Create donut chart
+                    fig_donut = go.Figure(data=[go.Pie(
+                        labels=payment_totals['label'],
+                        values=payment_totals['amount'],
+                        hole=0.5,
+                        textinfo='percent',
+                        marker_colors=px.colors.qualitative.Set3
+                    )])
+                    
+                    # Customize the theme to match dark mode and improve mobile responsiveness
+                    fig_donut.update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        height=500,
+                        title=f'Payment Method Distribution - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
+                        legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=-0.3,
+                            xanchor="center",
+                            x=0.5
+                        ),
+                        # Improve responsiveness
+                        autosize=True,
+                    )
+                    
+                    st.plotly_chart(fig_donut, use_container_width=True)
+                else:
+                    st.info(f"No expense data available for the selected filters")
             
-            # Customize the theme to match dark mode and improve mobile responsiveness
-            fig_donut.update_layout(
-                template='plotly_dark',
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=20, r=20, t=40, b=20),
-                height=500,
-                title=f'Payment Method Distribution - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=-0.3,
-                    xanchor="center",
-                    x=0.5
-                ),
-                # Improve responsiveness
-                autosize=True,
-            )
-            
-            st.plotly_chart(fig_donut, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            with trend_tabs[2]:
+                # 4. NEW: Pie chart of expense themes
+                if not filtered_df.empty:
+                    # Aggregate expenses by theme
+                    theme_totals = filtered_df.groupby('theme')['amount'].sum().reset_index()
+                    
+                    # Calculate percentages
+                    theme_total = theme_totals['amount'].sum()
+                    theme_totals['percentage'] = (theme_totals['amount'] / theme_total * 100).round(1)
+                    
+                    # Add percentage to labels
+                    theme_totals['label'] = theme_totals.apply(
+                        lambda x: f"{x['theme']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
+                    )
+                    
+                    # Define custom colors for each theme - improved color palette
+                    theme_colors = {
+                        "Cost of living": "#7986CB",  # Indigo-blue
+                        "Going out": "#FF8A65",       # Orange
+                        "Incidentals": "#4DB6AC",     # Teal
+                        "Other": "#9E9E9E"            # Grey
+                    }
+                    
+                    # Extract colors in the same order as themes
+                    color_sequence = [theme_colors.get(theme, "#9E9E9E") for theme in theme_totals['theme']]
+                    
+                    # Create pie chart for themes
+                    fig_theme = go.Figure(data=[go.Pie(
+                        labels=theme_totals['label'],
+                        values=theme_totals['amount'],
+                        hole=0.4,
+                        textinfo='percent',
+                        marker_colors=color_sequence
+                    )])
+                    
+                    # Customize the theme to match dark mode and improve mobile responsiveness
+                    fig_theme.update_layout(
+                        template='plotly_dark',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        margin=dict(l=20, r=20, t=40, b=20),
+                        height=500,
+                        title=f'Expense Distribution by Theme - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
+                        legend=dict(
+                            orientation="h",
+                            yanchor="bottom",
+                            y=-0.3,
+                            xanchor="center",
+                            x=0.5
+                        ),
+                        # Improve responsiveness
+                        autosize=True,
+                    )
+                    
+                    st.plotly_chart(fig_theme, use_container_width=True)
+                    
+                    # Add theme category details as an expander
+                    with st.expander("What's included in each theme?", expanded=False):
+                        st.markdown(f"""
+                        <div style='margin: 10px 0;'>
+                            <p><b>Cost of living:</b> Bike, Public transport, Groceries, Household supplies, Rent/Maintenance, Furniture, Services, Electricity, Internet, Insurance, Medical expenses, Gas, Phone</p>
+                            <p><b>Going out:</b> Auto/Cab, Eating out, Party, Cinema, Entertainment, Liquor, Travel, Games/Sports</p>
+                            <p><b>Incidentals:</b> Education, Gift, Investment, Flights, Clothes</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info(f"No expense data available for the selected filters")
             
             # Add expander for debugging data
             with st.expander("🔧 Debug Data Preview", expanded=False):
