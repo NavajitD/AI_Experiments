@@ -311,7 +311,7 @@ def main():
                         else:
                             billing_cycle = ""
                             
-                        # Submit button WITHOUT on_click callback (will handle submission outside the form)
+                        # Submit button WITHOUT on_click callback
                         submitted = st.form_submit_button("Add expense")
                     
                     # Shared expense checkbox OUTSIDE & BELOW the form
@@ -407,49 +407,66 @@ def main():
                         # Submit button with callback
                         submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
                 
-                # Handle form submission outside the form
+                # Handle form submission when the submit button is clicked directly
                 if submitted:
-                    # Manually set form_submitted flag
-                    st.session_state['form_submitted'] = True
-                    
                     if not expense_name:
                         st.error("Please enter an expense name.")
-                        st.session_state['form_submitted'] = False
-                    elif 'amount_input' not in st.session_state or st.session_state['amount_input'] <= 0:
+                    elif amount <= 0:
                         st.error("Amount must be greater than 0.")
-                        st.session_state['form_submitted'] = False
                     else:
                         # Calculate the final amount based on split options if this is a shared expense
-                        final_amount = st.session_state['amount_input']
-                        original_amount = st.session_state['amount_input']
+                        final_amount = amount
+                        original_amount = amount
                         
-                        if st.session_state['shared_input']:
-                            split_between = st.session_state.get('split_between_input', 1)
-                            split_amount = st.session_state.get('split_amount_input', 0.0)
-                            
-                            # Calculate split amount freshly based on current amount
-                            calculated_split = original_amount / split_between if split_between > 1 else original_amount
-                            
+                        if shared:
+                            # Get split values from the UI directly
                             # Prioritize split amount if provided, otherwise use calculated split
                             if split_amount > 0:
                                 final_amount = split_amount
-                            else:
-                                final_amount = calculated_split
+                            elif split_between > 1:
+                                final_amount = original_amount / split_between
                         
                         # Prepare data for submission
                         data = {
                             "expenseName": expense_name,
-                            "category": st.session_state['category_input'],
+                            "category": category,
                             "amount": final_amount,  # Send the calculated split amount
                             "originalAmount": original_amount,  # Include the original amount for reference
-                            "date": st.session_state['date_input'].strftime("%Y-%m-%d"),
-                            "month": st.session_state['date_input'].strftime("%B"),
-                            "year": st.session_state['date_input'].year,
-                            "paymentMethod": st.session_state['payment_method_input'],
-                            "shared": "Yes" if st.session_state['shared_input'] else "No",
-                            "billingCycle": billing_cycle if st.session_state['payment_method_input'] == "Credit card" else "",
+                            "date": date.strftime("%Y-%m-%d"),
+                            "month": date.strftime("%B"),
+                            "year": date.year,
+                            "paymentMethod": payment_method,
+                            "shared": "Yes" if shared else "No",
+                            "billingCycle": billing_cycle if payment_method == "Credit card" else "",
                             "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
+                        
+                        # Add split details if this is a shared expense
+                        if shared:
+                            data["splitBetween"] = split_between
+                            data["splitAmount"] = split_amount
+                        
+                        # Toggle debug mode for this submission
+                        st.session_state['debug_mode'] = True
+                        
+                        # Submit to Google Apps Script
+                        with st.spinner("Adding expense..."):
+                            response = submit_to_google_apps_script(data)
+                            
+                            if response.get("status") == "success":
+                                st.success("Expense added successfully!")
+                                # Reset form by forcing a rerun with clear flags
+                                for key in list(st.session_state.keys()):
+                                    if key not in ['debug_mode']:
+                                        if key in ['expense_name_input', 'amount_input', 'category_input', 
+                                                  'payment_method_input', 'shared_input', 'split_between_input', 
+                                                  'split_amount_input']:
+                                            del st.session_state[key]
+                                # Force a rerun
+                                st.rerun()
+                            else:
+                                st.error(f"Error: {response.get('message', 'Unknown error')}")
+                                st.error("Please check the Debug tab for more information.")
                         
                         # Add split details if this is a shared expense
                         if st.session_state['shared_input']:
