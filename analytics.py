@@ -240,11 +240,7 @@ def show_analytics():
                     </div>
                     """, unsafe_allow_html=True)
             
-            # Add filter section before trends
-            st.markdown("<div class='filter-container'>", unsafe_allow_html=True)
-            st.subheader("📅 Filter Data")
-            
-            # Add month and year filters
+            # Add filters without header
             filter_col1, filter_col2 = st.columns([1, 1])
             
             # Add "All" option for month and year filters
@@ -298,6 +294,9 @@ def show_analytics():
                 weekly_category = weekly_category.sort_values('sort_key')
             
             st.markdown("</div>", unsafe_allow_html=True)
+            
+            # Add some space before the trends section
+            st.markdown("<br>", unsafe_allow_html=True)
             
 
             
@@ -408,11 +407,11 @@ def show_analytics():
                         lambda x: f"{x['theme']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
                     )
                     
-                    # Define custom colors for each theme
+                    # Define custom colors for each theme - improved color palette
                     theme_colors = {
-                        "Cost of living": "#4CAF50",  # Green
-                        "Going out": "#FF9800",       # Orange
-                        "Incidentals": "#2196F3",     # Blue
+                        "Cost of living": "#7986CB",  # Indigo-blue
+                        "Going out": "#FF8A65",       # Orange
+                        "Incidentals": "#4DB6AC",     # Teal
                         "Other": "#9E9E9E"            # Grey
                     }
                     
