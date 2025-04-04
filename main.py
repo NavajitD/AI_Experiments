@@ -254,7 +254,7 @@ def main():
                     default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
                     default_index = categories.index(default_category) if default_category in categories else 0
                     
-                    # Form for the inputs
+                    # Form for the inputs (without on_click in the submit button - that's causing the error)
                     with st.form(key="expense_form"):
                         col1, col2 = st.columns(2)
                         
@@ -288,20 +288,38 @@ def main():
                         else:
                             billing_cycle = ""
                             
-                        # Submit button with callback
-                        submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
+                        # Submit button WITHOUT on_click callback (will handle submission outside the form)
+                        submitted = st.form_submit_button("Add expense")
                     
                     # Shared expense checkbox OUTSIDE & BELOW the form
                     shared = st.checkbox("Shared expense", value=False, key="shared_input")
                     
-                    # Function to update split amount when split between changes
+                    # Define functions for auto-updates to Split amount
                     def update_split_amount():
+                        """Update split amount when either amount or split between changes"""
                         current_amount = st.session_state.get('amount_input', 0.0)
                         current_split_between = st.session_state.get('split_between_input', 2)
                         
                         if current_amount > 0 and current_split_between > 0:
                             new_split_amount = round(current_amount / current_split_between, 2)
                             st.session_state['split_amount_input'] = new_split_amount
+                    
+                    # Callback for amount changes to update split amount
+                    def on_amount_change():
+                        """Trigger when amount changes to update split calculations"""
+                        # This will only matter if shared expense is already checked
+                        if st.session_state.get('shared_input', False):
+                            update_split_amount()
+                    
+                    # Register the callback for amount changes
+                    if 'amount_input' in st.session_state:
+                        prev_amount = st.session_state.get('_prev_amount', 0.0)
+                        curr_amount = st.session_state.get('amount_input', 0.0)
+                        
+                        # If amount changed, update split
+                        if prev_amount != curr_amount:
+                            st.session_state['_prev_amount'] = curr_amount
+                            on_amount_change()
                     
                     # Show split options immediately if shared expense is checked
                     if shared:
@@ -367,7 +385,10 @@ def main():
                         submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
                 
                 # Handle form submission outside the form
-                if st.session_state['form_submitted']:
+                if submitted:
+                    # Manually set form_submitted flag
+                    st.session_state['form_submitted'] = True
+                    
                     if not expense_name:
                         st.error("Please enter an expense name.")
                         st.session_state['form_submitted'] = False
