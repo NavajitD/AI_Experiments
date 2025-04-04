@@ -257,12 +257,6 @@ def main():
                     # Shared expense checkbox OUTSIDE the form to allow immediate interaction
                     shared = st.checkbox("Shared expense", value=False, key="shared_input")
                     
-                    # Define amount variable outside the form to make it available for split calculations
-                    amount_col1, amount_col2 = st.columns(2)
-                    with amount_col1:
-                        # Amount in Rupees
-                        amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
-                    
                     # Show split options immediately if shared expense is checked
                     split_between = 2  # Default value
                     split_amount = 0.0  # Default value
@@ -282,12 +276,18 @@ def main():
                                 key="split_between_input"
                             )
                         
+                        # Get the current amount value from session state for calculation
+                        current_amount = st.session_state.get('amount_input', 0.0)
+                        
                         with split_col2:
+                            # Calculate default split amount based on current amount and split between
+                            default_split = round(current_amount / split_between, 2) if current_amount > 0 and split_between > 0 else 0.0
+                            
                             split_amount = st.number_input(
                                 "Split amount (your share in ₹)", 
                                 min_value=0.0, 
-                                max_value=float(amount) if amount > 0 else 1000000.0,
-                                value=0.0 if amount <= 0 else round(amount / 2, 2),
+                                max_value=float(current_amount) if current_amount > 0 else 1000000.0,
+                                value=default_split,
                                 step=0.01,
                                 format="%.2f",
                                 help="Enter your portion of the expense (this will override the split calculation)",
@@ -296,9 +296,10 @@ def main():
                         
                         # Display the effective amount to be recorded
                         if split_amount > 0:
-                            st.info(f"Your share of ₹{amount:.2f} will be recorded as: ₹{split_amount:.2f}")
-                        elif split_between > 1:
-                            st.info(f"Your share of ₹{amount:.2f} will be recorded as: ₹{amount / split_between:.2f}")
+                            st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{split_amount:.2f}")
+                        elif split_between > 1 and current_amount > 0:
+                            calculated_amount = current_amount / split_between
+                            st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{calculated_amount:.2f}")
                     
                     # Form for the remaining inputs
                     with st.form(key="expense_form"):
@@ -312,6 +313,9 @@ def main():
                             payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
                         
                         with col2:
+                            # Amount in Rupees - MOVED BACK INSIDE THE FORM
+                            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+                            
                             # Date with calendar component
                             today = datetime.now().date()
                             date = st.date_input("Date", value=today, key="date_input")
@@ -354,11 +358,14 @@ def main():
                             split_between = st.session_state.get('split_between_input', 1)
                             split_amount = st.session_state.get('split_amount_input', 0.0)
                             
-                            # Prioritize split amount if provided, otherwise use split between calculation
+                            # Calculate split amount freshly based on current amount
+                            calculated_split = original_amount / split_between if split_between > 1 else original_amount
+                            
+                            # Prioritize split amount if provided, otherwise use calculated split
                             if split_amount > 0:
                                 final_amount = split_amount
-                            elif split_between > 1:
-                                final_amount = original_amount / split_between
+                            else:
+                                final_amount = calculated_split
                         
                         # Prepare data for submission
                         data = {
