@@ -56,16 +56,22 @@ def handle_form_submit():
     st.session_state['form_submitted'] = True
 
 def reset_form():
+    """Reset form fields without modifying widget-bound session state directly"""
     st.session_state['reset_form'] = True
     st.session_state['predicted_category'] = ""
     st.session_state['category_predicted'] = ""
     st.session_state['form_submitted'] = False
     st.session_state['show_split_options'] = False
-    # Reset date input to today's date
-    if 'date_input' in st.session_state:
-        st.session_state['date_input'] = datetime.now().date()
-    # We can't directly set expense_name_input, but we'll use reset_form flag
-    # to handle this in the UI
+    
+    # Clear split related fields
+    if 'split_between_input' in st.session_state:
+        del st.session_state['split_between_input']
+    if 'split_amount_input' in st.session_state:
+        del st.session_state['split_amount_input']
+    
+    # Mark form for reset but don't directly modify widget values
+    # This will be handled during the next rerun
+    st.session_state['_form_reset_pending'] = True
 
 # We don't need this callback anymore since we're handling shared expense state directly in the form
 # def on_shared_expense_change():
@@ -195,6 +201,23 @@ def main():
     # Hide the debug outputs by default
     if 'debug_mode' not in st.session_state:
         st.session_state['debug_mode'] = False
+    
+    # Handle any pending form reset at the start of the app
+    if st.session_state.get('reset_form', False):
+        # Clear the reset flag
+        st.session_state['reset_form'] = False
+        
+        # Clear expense_name_input if it exists
+        if 'expense_name_input' in st.session_state:
+            del st.session_state['expense_name_input']
+            
+        # Clear amount_input if it exists
+        if 'amount_input' in st.session_state:
+            del st.session_state['amount_input']
+        
+        # Clear shared_input
+        if 'shared_input' in st.session_state:
+            st.session_state['shared_input'] = False
     
     # CSS for premium dark theme design with animated background
     st.markdown("""
@@ -444,6 +467,8 @@ def main():
                                 st.success("Expense added successfully!")
                                 # Reset form using our custom reset function
                                 reset_form()
+                                # Force a rerun to clear the form
+                                st.rerun()
                             else:
                                 st.error(f"Error: {response.get('message', 'Unknown error')}")
                                 st.error("Please check the Debug tab for more information.")
