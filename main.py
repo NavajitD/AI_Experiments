@@ -213,7 +213,7 @@ def main():
                 with st.container():
                     st.markdown("""
                     <div class="glass-card">
-                        <h3 class="title-font">New Expense</h3>
+                        <h3 class="title-font">Add Expense</h3>
                     """, unsafe_allow_html=True)
                     
                     # Expense name input with on_change callback
