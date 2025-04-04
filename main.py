@@ -73,10 +73,6 @@ def reset_form():
     # This will be handled during the next rerun
     st.session_state['_form_reset_pending'] = True
 
-# We don't need this callback anymore since we're handling shared expense state directly in the form
-# def on_shared_expense_change():
-#     st.session_state['show_split_options'] = st.session_state.shared_input
-
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
     api_key = os.environ.get("GOOGLE_API_KEY")
@@ -183,18 +179,24 @@ def get_billing_cycle(date_obj):
     
     return f"{start_month_str} 25 - {end_month_str} 25"
 
-# Function to calculate final amount based on split options
-def calculate_final_amount(original_amount, split_between, split_amount):
-    # If split amount is provided, use it directly
-    if split_amount > 0:
-        return split_amount
+# Define functions for auto-updates to Split amount
+def update_split_amount():
+    """Update split amount when either amount or split between changes"""
+    current_amount = st.session_state.get('amount_input', 0.0)
+    current_split_between = st.session_state.get('split_between_input', 2)
     
-    # If split between is provided, divide the original amount
-    if split_between > 1:
-        return original_amount / split_between
+    if current_amount > 0 and current_split_between > 0:
+        new_split_amount = round(current_amount / current_split_between, 2)
+        st.session_state['split_amount_input'] = new_split_amount
+
+# Function to handle showing/hiding split options
+def toggle_split_options():
+    # Update the shared expense flag
+    st.session_state['show_split_options'] = st.session_state.shared_input
     
-    # If neither is properly set, return the original amount
-    return original_amount
+    # If turning on shared expense, initialize split amount
+    if st.session_state.shared_input:
+        update_split_amount()
 
 # Main app function
 def main():
@@ -277,7 +279,7 @@ def main():
                     default_category = st.session_state.get('predicted_category', categories[0]) if expense_name else categories[0]
                     default_index = categories.index(default_category) if default_category in categories else 0
                     
-                    # Form for the inputs (without on_click in the submit button - that's causing the error)
+                    # Form for the inputs
                     with st.form(key="expense_form"):
                         col1, col2 = st.columns(2)
                         
@@ -296,95 +298,50 @@ def main():
                             today = datetime.now().date()
                             date = st.date_input("Date", value=today, key="date_input")
                         
-                        # Month and Year (auto-filled based on date)
-                        month = date.strftime("%B")
-                        year = date.year
+                        # Shared expense checkbox INSIDE the form
+                        shared = st.checkbox("Shared expense", value=False, key="shared_input", on_change=toggle_split_options)
                         
-                        # Billing cycle (if Credit Card is selected)
-                        if payment_method == "Credit card":
-                            billing_cycle = get_billing_cycle(date)
-                            st.markdown(f"""
-                            <div class="info-box">
-                                <strong>Billing Cycle:</strong> {billing_cycle}
-                            </div>
-                            """, unsafe_allow_html=True)
-                        else:
-                            billing_cycle = ""
-                            
-                        # Submit button WITHOUT on_click callback
-                        submitted = st.form_submit_button("Add expense")
-                    
-                    # Shared expense checkbox OUTSIDE & BELOW the form
-                    shared = st.checkbox("Shared expense", value=False, key="shared_input")
-                    
-                    # Define functions for auto-updates to Split amount
-                    def update_split_amount():
-                        """Update split amount when either amount or split between changes"""
-                        current_amount = st.session_state.get('amount_input', 0.0)
-                        current_split_between = st.session_state.get('split_between_input', 2)
-                        
-                        if current_amount > 0 and current_split_between > 0:
-                            new_split_amount = round(current_amount / current_split_between, 2)
-                            st.session_state['split_amount_input'] = new_split_amount
-                    
-                    # Callback for amount changes to update split amount
-                    def on_amount_change():
-                        """Trigger when amount changes to update split calculations"""
-                        # This will only matter if shared expense is already checked
+                        # Show split options if shared expense is checked
                         if st.session_state.get('shared_input', False):
-                            update_split_amount()
-                    
-                    # Register the callback for amount changes
-                    if 'amount_input' in st.session_state:
-                        prev_amount = st.session_state.get('_prev_amount', 0.0)
-                        curr_amount = st.session_state.get('amount_input', 0.0)
-                        
-                        # If amount changed, update split
-                        if prev_amount != curr_amount:
-                            st.session_state['_prev_amount'] = curr_amount
-                            on_amount_change()
-                    
-                    # Show split options immediately if shared expense is checked
-                    if shared:
-                        split_col1, split_col2 = st.columns(2)
-                        
-                        with split_col1:
-                            # Only allow natural numbers for split between, with on_change callback
-                            split_between = st.number_input(
-                                "Split between (number of people)", 
-                                min_value=1, 
-                                max_value=100, 
-                                value=2, 
-                                step=1,
-                                help="Enter the total number of people sharing this expense",
-                                key="split_between_input",
-                                on_change=update_split_amount
-                            )
-                        
-                        # Get the current amount value from session state for calculation
-                        current_amount = st.session_state.get('amount_input', 0.0)
-                        
-                        with split_col2:
-                            # Calculate default split amount based on current amount and split between
-                            default_split = round(current_amount / split_between, 2) if current_amount > 0 and split_between > 0 else 0.0
+                            split_col1, split_col2 = st.columns(2)
                             
-                            split_amount = st.number_input(
-                                "Split amount (your share in ₹)", 
-                                min_value=0.0, 
-                                max_value=float(current_amount) if current_amount > 0 else 1000000.0,
-                                value=st.session_state.get('split_amount_input', default_split),
-                                step=0.01,
-                                format="%.2f",
-                                help="Enter your portion of the expense (this will override the split calculation)",
-                                key="split_amount_input"
-                            )
-                        
-                        # Display the effective amount to be recorded
-                        if split_amount > 0:
-                            st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{split_amount:.2f}")
-                        elif split_between > 1 and current_amount > 0:
-                            calculated_amount = current_amount / split_between
-                            st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{calculated_amount:.2f}")
+                            with split_col1:
+                                # Only allow natural numbers for split between, with on_change callback
+                                split_between = st.number_input(
+                                    "Split between (number of people)", 
+                                    min_value=1, 
+                                    max_value=100, 
+                                    value=2, 
+                                    step=1,
+                                    help="Enter the total number of people sharing this expense",
+                                    key="split_between_input",
+                                    on_change=update_split_amount
+                                )
+                            
+                            # Get the current amount value from session state for calculation
+                            current_amount = st.session_state.get('amount_input', 0.0)
+                            
+                            with split_col2:
+                                # Calculate default split amount based on current amount and split between
+                                default_split = round(current_amount / split_between, 2) if current_amount > 0 and split_between > 0 else 0.0
+                                
+                                split_amount = st.number_input(
+                                    "Split amount (your share in ₹)", 
+                                    min_value=0.0, 
+                                    max_value=float(current_amount) if current_amount > 0 else 1000000.0,
+                                    value=st.session_state.get('split_amount_input', default_split),
+                                    step=0.01,
+                                    format="%.2f",
+                                    help="Enter your portion of the expense (this will override the split calculation)",
+                                    key="split_amount_input"
+                                )
+                            
+                            # Display the effective amount to be recorded
+                            if split_amount > 0:
+                                st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{split_amount:.2f}")
+                            elif split_between > 1 and current_amount > 0:
+                                calculated_amount = current_amount / split_between
+                                st.info(f"Your share of ₹{current_amount:.2f} will be recorded as: ₹{calculated_amount:.2f}")
                         
                         # Month and Year (auto-filled based on date)
                         month = date.strftime("%B")
@@ -401,13 +358,10 @@ def main():
                         else:
                             billing_cycle = ""
                         
-                        # Store shared expense info and its values in hidden fields
-                        st.markdown("<!-- Hidden field for tracking shared expense values -->", unsafe_allow_html=True)
-                        
-                        # Submit button with callback
-                        submitted = st.form_submit_button("Add expense", on_click=handle_form_submit)
+                        # Submit button
+                        submitted = st.form_submit_button("Add expense")
                 
-                # Handle form submission when the submit button is clicked directly
+                # Handle form submission
                 if submitted:
                     if not expense_name:
                         st.error("Please enter an expense name.")
@@ -418,8 +372,11 @@ def main():
                         final_amount = amount
                         original_amount = amount
                         
-                        if shared:
-                            # Get split values from the UI directly
+                        if st.session_state.get('shared_input', False):
+                            # Get split values from the session state
+                            split_between = st.session_state.get('split_between_input', 1)
+                            split_amount = st.session_state.get('split_amount_input', 0.0)
+                            
                             # Prioritize split amount if provided, otherwise use calculated split
                             if split_amount > 0:
                                 final_amount = split_amount
@@ -436,40 +393,13 @@ def main():
                             "month": date.strftime("%B"),
                             "year": date.year,
                             "paymentMethod": payment_method,
-                            "shared": "Yes" if shared else "No",
+                            "shared": "Yes" if st.session_state.get('shared_input', False) else "No",
                             "billingCycle": billing_cycle if payment_method == "Credit card" else "",
                             "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         }
                         
                         # Add split details if this is a shared expense
-                        if shared:
-                            data["splitBetween"] = split_between
-                            data["splitAmount"] = split_amount
-                        
-                        # Toggle debug mode for this submission
-                        st.session_state['debug_mode'] = True
-                        
-                        # Submit to Google Apps Script
-                        with st.spinner("Adding expense..."):
-                            response = submit_to_google_apps_script(data)
-                            
-                            if response.get("status") == "success":
-                                st.success("Expense added successfully!")
-                                # Reset form by forcing a rerun with clear flags
-                                for key in list(st.session_state.keys()):
-                                    if key not in ['debug_mode']:
-                                        if key in ['expense_name_input', 'amount_input', 'category_input', 
-                                                  'payment_method_input', 'shared_input', 'split_between_input', 
-                                                  'split_amount_input']:
-                                            del st.session_state[key]
-                                # Force a rerun
-                                st.rerun()
-                            else:
-                                st.error(f"Error: {response.get('message', 'Unknown error')}")
-                                st.error("Please check the Debug tab for more information.")
-                        
-                        # Add split details if this is a shared expense
-                        if st.session_state['shared_input']:
+                        if st.session_state.get('shared_input', False):
                             data["splitBetween"] = st.session_state.get('split_between_input', 1)
                             data["splitAmount"] = st.session_state.get('split_amount_input', 0.0)
                         
