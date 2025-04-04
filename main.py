@@ -67,9 +67,9 @@ def reset_form():
     # We can't directly set expense_name_input, but we'll use reset_form flag
     # to handle this in the UI
 
-# Callback for shared expense checkbox
-def on_shared_expense_change():
-    st.session_state['show_split_options'] = st.session_state.shared_input
+# We don't need this callback anymore since we're handling shared expense state directly in the form
+# def on_shared_expense_change():
+#     st.session_state['show_split_options'] = st.session_state.shared_input
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
@@ -288,8 +288,11 @@ def main():
                         else:
                             billing_cycle = ""
                         
-                        # Shared expense with on_change callback
-                        shared = st.checkbox("Shared expense", value=False, key="shared_input", on_change=on_shared_expense_change)
+                        # Shared expense without on_change callback inside form
+                        shared = st.checkbox("Shared expense", value=False, key="shared_input")
+                        
+                        # Store the value in session state to use outside the form
+                        st.session_state['show_split_options'] = shared
                         
                         # Show split options if shared expense is checked
                         if shared:
@@ -320,8 +323,6 @@ def main():
                                 )
                             
                             # Display the effective amount to be recorded
-                            effective_amount = calculate_final_amount(amount, split_between, split_amount)
-                            
                             if split_amount > 0:
                                 st.info(f"Your share of ₹{amount:.2f} will be recorded as: ₹{split_amount:.2f}")
                             elif split_between > 1:
