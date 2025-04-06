@@ -363,12 +363,13 @@ def show_analytics():
                         lambda x: f"{x['paymentMethod']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
                     )
                     
-                    # Create donut chart
+                    # Create donut chart with payment method names as labels
                     fig_donut = go.Figure(data=[go.Pie(
-                        labels=payment_totals['label'],
+                        labels=payment_totals['paymentMethod'],  # Use payment method names directly
                         values=payment_totals['amount'],
                         hole=0.5,
-                        textinfo='percent',
+                        textinfo='label',  # Show the label text instead of just percentage
+                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}<extra></extra>',  # Removed "trace 0" with <extra></extra>
                         marker_colors=px.colors.qualitative.Set3
                     )])
                     
@@ -421,12 +422,13 @@ def show_analytics():
                     # Extract colors in the same order as themes
                     color_sequence = [theme_colors.get(theme, "#9E9E9E") for theme in theme_totals['theme']]
                     
-                    # Create pie chart for themes
+                    # Create pie chart for themes with theme names as labels
                     fig_theme = go.Figure(data=[go.Pie(
-                        labels=theme_totals['label'],
+                        labels=theme_totals['theme'],  # Use theme names directly
                         values=theme_totals['amount'],
                         hole=0.4,
-                        textinfo='percent',
+                        textinfo='label',  # Show the label text instead of just percentage
+                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}<extra></extra>',  # Removed "trace 0" with <extra></extra>
                         marker_colors=color_sequence
                     )])
                     
