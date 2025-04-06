@@ -177,27 +177,38 @@ def get_billing_cycle(date_obj):
     
     return f"{start_month_str} 25 - {end_month_str} 25"
 
+# Fix for preventing enter key from submitting the form
+def prevent_enter_submit():
+    # JavaScript to prevent form submission on Enter key
+    js = """
+    <script>
+    // Wait for the DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all number input fields in the form
+        const form = document.querySelector('form');
+        if (form) {
+            // Prevent the default form submission on Enter key
+            form.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
+    });
+    </script>
+    """
+    st.markdown(js, unsafe_allow_html=True)
+    
 # Main app
 def main():
+    # Inject JavaScript to prevent form submission on Enter key
+    prevent_enter_submit()
+    
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
-    /* Custom CSS to prevent form submission on Enter */
-    div[data-testid="stForm"] > form:first-of-type {
-        display: flex;
-        flex-direction: column;
-    }
-    div[data-testid="stForm"] > form:first-of-type > div:last-child {
-        order: 9999;
-    }
-    /* Hide the dummy text input field */
-    div[data-baseweb="input"] input[value=""][aria-label=""] {
-        position: absolute;
-        opacity: 0;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-    }
+    /* Custom CSS for styling */
     </style>
     """, unsafe_allow_html=True)
     
@@ -256,8 +267,15 @@ def main():
                     # Store the current amount value before the widget is rendered
                     current_amount = st.session_state.get('amount_input', 0.0)
                     
-                    # Amount input
-                    amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+                    # Amount input with on_change attribute to handle Enter key
+                    amount = st.number_input(
+                        "Amount (₹)", 
+                        min_value=0.0, 
+                        step=0.01, 
+                        format="%.2f", 
+                        key="amount_input", 
+                        on_change=None  # This helps prevent form submission
+                    )
                     
                     # Date with calendar component
                     today = datetime.now().date()
@@ -272,13 +290,14 @@ def main():
                         # Store the current split_between value before the widget is rendered
                         current_split_between = st.session_state.get('split_between_input', 2)
                         
-                        # Split between input
+                        # Split between input with on_change attribute
                         split_between = st.number_input(
                             "Split between (number of people)", 
                             min_value=1, 
                             value=2, 
                             step=1, 
-                            key="split_between_input"
+                            key="split_between_input",
+                            on_change=None  # This helps prevent form submission
                         )
                     
                     with split_col2:
@@ -311,12 +330,11 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Add dummy text input to capture Enter key presses but not visible to user
-                # This prevents Enter from submitting the form
-                st.text_input("", value="", key="dummy_input", label_visibility="collapsed")
-                
-                # Submit button at the end of the form
-                submit_clicked = st.form_submit_button("Add expense", use_container_width=True)
+                # Place submit button at the end of the form
+                # without any other elements that could capture Enter key
+                submit_col = st.columns([1])[0]
+                with submit_col:
+                    submit_clicked = st.form_submit_button("Add expense", use_container_width=True)
             
             # Check if form was submitted
             if submit_clicked:
