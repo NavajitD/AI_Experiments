@@ -13,10 +13,6 @@ st.set_page_config(
 # Initialize session state variables
 if 'debug_mode' not in st.session_state:
     st.session_state['debug_mode'] = False
-if 'prev_amount' not in st.session_state:
-    st.session_state['prev_amount'] = 0.0
-if 'prev_split_between' not in st.session_state:
-    st.session_state['prev_split_between'] = 2
 
 # Function to get billing cycle based on date
 def get_billing_cycle(date_obj):
@@ -117,7 +113,7 @@ def main():
         # Shared expense checkbox - OUTSIDE form
         shared = st.checkbox("Shared expense", key="shared_input")
         
-        # Form for the inputs - BASIC VERSION WITHOUT ANY CALLBACKS
+        # Form for the inputs - USING DYNAMIC KEY APPROACH
         with st.form(key="expense_form"):
             col1, col2 = st.columns(2)
             
@@ -141,20 +137,36 @@ def main():
                 split_col1, split_col2 = st.columns(2)
                 
                 with split_col1:
-                    split_between = st.number_input("Split between (number of people)", min_value=1, value=2, step=1, key="split_between_input")
+                    split_between = st.number_input(
+                        "Split between (number of people)", 
+                        min_value=1, 
+                        value=2, 
+                        step=1, 
+                        key="split_between_input"
+                    )
                 
                 with split_col2:
-                    # Automatically calculate split amount
-                    default_split = round(amount / split_between, 2) if amount > 0 else 0.0
-                    split_amount = st.number_input("Split Amount (₹)", min_value=0.0, value=default_split, format="%.2f", key="split_amount_input")
+                    # Calculate split amount - this will be recalculated on every form interaction
+                    calculated_split = round(amount / split_between, 2) if amount > 0 and split_between > 0 else 0.0
+                    
+                    # Use a dynamic key that depends on amount and split_between values
+                    # This forces Streamlit to recreate the widget with updated defaults when these values change
+                    dynamic_key = f"split_amount_{amount}_{split_between}"
+                    
+                    split_amount = st.number_input(
+                        "Split Amount (₹)", 
+                        min_value=0.0, 
+                        value=calculated_split,  # This will update as amount/split_between change
+                        format="%.2f", 
+                        key=dynamic_key
+                    )
+                    
+                    # Store the value in our standard session state key for consistency
+                    st.session_state['split_amount_input'] = split_amount
                 
-                # Display split info
+                # Display calculation formula to make it clear
                 if amount > 0 and split_between > 1:
-                    if split_amount > 0:
-                        st.info(f"Your share of ₹{amount:.2f} will be recorded as: ₹{split_amount:.2f}")
-                    else:
-                        calculated_amount = amount / split_between
-                        st.info(f"Your share of ₹{amount:.2f} will be recorded as: ₹{calculated_amount:.2f}")
+                    st.info(f"Split Amount = {amount:.2f} ÷ {split_between} = {calculated_split:.2f}")
             
             # Billing cycle (if Credit Card is selected)
             if payment_method == "Credit card":
@@ -171,20 +183,6 @@ def main():
             # Submit button at the very end of the form
             submitted = st.form_submit_button("Add expense")
         
-        # Check if amount or split_between changed and update split amount
-        current_amount = st.session_state.get('amount_input', 0.0)
-        current_split_between = st.session_state.get('split_between_input', 2)
-        
-        # If amount or split between changed and shared expense is checked, update split amount for next render
-        if shared and (current_amount != st.session_state['prev_amount'] or current_split_between != st.session_state['prev_split_between']):
-            if current_amount > 0 and current_split_between > 0:
-                st.session_state['split_amount_input'] = round(current_amount / current_split_between, 2)
-            # Update the previous values
-            st.session_state['prev_amount'] = current_amount
-            st.session_state['prev_split_between'] = current_split_between
-            # Force a rerun to show the updated split amount
-            st.rerun()
-            
         # Handle form submission outside the form
         if submitted:
             if not expense_name:
@@ -197,15 +195,23 @@ def main():
                 original_amount = amount
                 
                 if shared:
-                    # Get split values
+                    # Get split values - for split_amount, get from dynamic key or session state
                     split_between = st.session_state.get('split_between_input', 1)
-                    split_amount = st.session_state.get('split_amount_input', 0.0)
                     
-                    # Prioritize split amount if provided, otherwise use calculated split
-                    if split_amount > 0:
-                        final_amount = split_amount
-                    elif split_between > 1:
-                        final_amount = original_amount / split_between
+                    # Try to find the dynamic key value in session state
+                    dynamic_key = f"split_amount_{amount}_{split_between}"
+                    split_amount = st.session_state.get(dynamic_key, 0.0)
+                    
+                    # If not found in dynamic key, try the standard key
+                    if split_amount == 0.0:
+                        split_amount = st.session_state.get('split_amount_input', 0.0)
+                    
+                    # If still not found, calculate it
+                    if split_amount == 0.0 and amount > 0 and split_between > 1:
+                        split_amount = round(amount / split_between, 2)
+                    
+                    # Use the split amount for the final amount
+                    final_amount = split_amount
                 
                 # Prepare data for submission
                 data = {
