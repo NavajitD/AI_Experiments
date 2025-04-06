@@ -368,7 +368,9 @@ def show_analytics():
                         labels=payment_totals['label'],
                         values=payment_totals['amount'],
                         hole=0.5,
-                        textinfo='percent',
+                        textinfo='label',  # Changed from 'percent' to 'label'
+                        textposition='inside',  # Ensure text is positioned inside the slices
+                        insidetextorientation='radial',  # Orient text radially for better readability
                         marker_colors=px.colors.qualitative.Set3
                     )])
                     
@@ -426,7 +428,9 @@ def show_analytics():
                         labels=theme_totals['label'],
                         values=theme_totals['amount'],
                         hole=0.4,
-                        textinfo='percent',
+                        textinfo='label',  # Changed from 'percent' to 'label'
+                        textposition='inside',  # Ensure text is positioned inside the slices
+                        insidetextorientation='radial',  # Orient text radially for better readability
                         marker_colors=color_sequence
                     )])
                     
