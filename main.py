@@ -2,11 +2,13 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime, timedelta
-# Import the analytics functionality
-from analytics import show_analytics  # Add this import statement
 
-# Set page config
+# Set page config - must be the first Streamlit command
 st.set_page_config(page_title="Expense Tracker", page_icon="✦", layout="wide")
+
+# Import analytics AFTER setting page config
+# Using a function import to prevent code in analytics.py from running at import time
+from analytics import show_analytics
 
 # Initialize variables in session state
 if 'debug_mode' not in st.session_state:
@@ -185,8 +187,8 @@ def main():
                         st.error("Please check the Debug tab for more information.")
     
     with tab2:
-        # Replace the placeholder with the call to show_analytics
-        show_analytics()  # Call the analytics function from the imported module
+        # Call the analytics function
+        show_analytics()
     
     with tab3:
         st.header("Debug Information")
