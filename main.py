@@ -296,27 +296,11 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Invisible submit
+                # Submit button at the end of the form
                 submitted = st.form_submit_button("Add expense", use_container_width=True)
-                
-                # Spacer
-                st.write("")
-                st.write("")
-                
-                # The visible submit button (this one doesn't actually submit the form)
-                # It's just a visual button
-                st.markdown("<div style='text-align: center;'><button class='stButton'>Add expense</button></div>", unsafe_allow_html=True)
             
-            # Additional button outside the form to trigger submission
-            if st.button("Add expense", use_container_width=True):
-                # Manually trigger form submission
-                st.session_state['form_submitted'] = True
-            
-            # Check if form was submitted via Enter key
-            if submitted or st.session_state.get('form_submitted', False):
-                # Reset form submission flag
-                st.session_state['form_submitted'] = False
-                
+            # Check if form was submitted
+            if submitted:
                 # Process form submission
                 if not expense_name:
                     st.error("Please enter an expense name.")
