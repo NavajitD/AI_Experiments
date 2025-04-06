@@ -32,6 +32,10 @@ if 'reset_form' not in st.session_state:
     st.session_state['reset_form'] = False
 if 'debug_mode' not in st.session_state:
     st.session_state['debug_mode'] = False
+if 'prev_amount' not in st.session_state:
+    st.session_state['prev_amount'] = 0.0
+if 'prev_split_between' not in st.session_state:
+    st.session_state['prev_split_between'] = 2
 
 # Function to predict category
 def predict_category(expense_name):
@@ -248,24 +252,43 @@ def main():
                             key="split_between_input"
                         )
                     
+                    # Check if amount or split_between has changed
+                    current_amount = amount
+                    current_split_between = split_between
+                    
+                    # If either has changed, force a rerun to update the split amount
+                    if (current_amount != st.session_state['prev_amount'] or 
+                        current_split_between != st.session_state['prev_split_between']) and shared:
+                        
+                        # Update previous values
+                        st.session_state['prev_amount'] = current_amount
+                        st.session_state['prev_split_between'] = current_split_between
+                        
+                        # Only force rerun if amount is valid
+                        if current_amount > 0:
+                            st.rerun()
+                    
+                    with split_col1:
+                        split_between = st.number_input(
+                            "Split between (number of people)", 
+                            min_value=1, 
+                            value=2, 
+                            step=1, 
+                            key="split_between_input"
+                        )
+                    
                     with split_col2:
                         # Calculate split amount based on current form values
                         calculated_split = round(amount / split_between, 2) if amount > 0 and split_between > 0 else 0.0
                         
-                        # Here's the key trick: Use a dynamic key based on amount and split_between
-                        # This forces Streamlit to recreate the widget with updated values
-                        split_key = f"split_amount_{amount}_{split_between}"
-                        
+                        # Use calculated_split directly as the value
                         split_amount = st.number_input(
                             "Split Amount (₹)", 
                             min_value=0.0, 
                             value=calculated_split, 
                             format="%.2f", 
-                            key=split_key
+                            key="split_amount_input"
                         )
-                        
-                        # Store the current value in our regular session state key for form submission
-                        st.session_state['split_amount_input'] = split_amount
                     
                     # Show the calculation formula
                     if amount > 0 and split_between > 1:
@@ -297,14 +320,7 @@ def main():
                     if shared:
                         # Get split values
                         split_between = st.session_state.get('split_between_input', 1)
-                        
-                        # Try to get the split amount from the dynamic key
-                        split_key = f"split_amount_{amount}_{split_between}"
-                        split_amount = st.session_state.get(split_key, 0.0)
-                        
-                        # If not found, try the regular session state key
-                        if split_amount == 0.0:
-                            split_amount = st.session_state.get('split_amount_input', 0.0)
+                        split_amount = st.session_state.get('split_amount_input', 0.0)
                         
                         # If still not found, calculate it
                         if split_amount == 0.0 and amount > 0 and split_between > 1:
