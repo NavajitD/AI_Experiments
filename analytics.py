@@ -365,15 +365,18 @@ def show_analytics():
                     
                     # Create donut chart with simple category names for display on chart
                     fig_donut = go.Figure(data=[go.Pie(
-                        labels=payment_totals['paymentMethod'],  # Use only payment method names
+                        labels=payment_totals['paymentMethod'],  # Use only payment method names for data
                         values=payment_totals['amount'],
                         hole=0.5,
-                        textinfo='label',  # Show just the payment method name
-                        textposition='inside',  # Ensure text is positioned inside the slices
+                        text=payment_totals['paymentMethod'],  # Explicitly set the text to payment method names
+                        textinfo='text',  # Use our custom text field to ensure only names are shown
+                        textposition='inside',  # Position text inside the slices
+                        insidetextfont=dict(size=12),  # Make text larger and more readable
                         insidetextorientation='radial',  # Orient text radially for better readability
                         marker_colors=px.colors.qualitative.Set3,
                         hoverinfo='label+percent+value',  # Show detailed info on hover
-                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}'
+                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}',
+                        showlegend=True  # Ensure legend is visible
                     )])
                     
                     # Customize the theme to match dark mode and improve mobile responsiveness
@@ -427,15 +430,18 @@ def show_analytics():
                     
                     # Create pie chart for themes with simple theme names for display on chart
                     fig_theme = go.Figure(data=[go.Pie(
-                        labels=theme_totals['theme'],  # Use only theme names
+                        labels=theme_totals['theme'],  # Use only theme names for data
                         values=theme_totals['amount'],
                         hole=0.4,
-                        textinfo='label',  # Show just the theme name
-                        textposition='inside',  # Ensure text is positioned inside the slices
+                        text=theme_totals['theme'],  # Explicitly set the text to theme names
+                        textinfo='text',  # Use our custom text field to ensure only names are shown
+                        textposition='inside',  # Position text inside the slices
+                        insidetextfont=dict(size=12),  # Make text larger and more readable
                         insidetextorientation='radial',  # Orient text radially for better readability
                         marker_colors=color_sequence,
                         hoverinfo='label+percent+value',  # Show detailed info on hover
-                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}'
+                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}',
+                        showlegend=True  # Ensure legend is visible
                     )])
                     
                     # Customize the theme to match dark mode and improve mobile responsiveness
