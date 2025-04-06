@@ -182,7 +182,22 @@ def main():
     # CSS for premium dark theme design with animated background
     st.markdown("""
     <style>
-    /* Your CSS styles here */
+    /* Custom CSS to prevent form submission on Enter */
+    div[data-testid="stForm"] > form:first-of-type {
+        display: flex;
+        flex-direction: column;
+    }
+    div[data-testid="stForm"] > form:first-of-type > div:last-child {
+        order: 9999;
+    }
+    /* Hide the dummy text input field */
+    div[data-baseweb="input"] input[value=""][aria-label=""] {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -227,7 +242,7 @@ def main():
             shared = st.checkbox("Shared expense", key="shared_input")
             
             # Form for the inputs
-            with st.form(key="expense_form"):
+            with st.form(key="expense_form", clear_on_submit=False):
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -296,12 +311,16 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
+                # Add dummy text input to capture Enter key presses but not visible to user
+                # This prevents Enter from submitting the form
+                st.text_input("", value="", key="dummy_input", label_visibility="collapsed")
+                
                 # Submit button at the end of the form
-                submitted = st.form_submit_button("Add expense", use_container_width=True)
+                submit_clicked = st.form_submit_button("Add expense", use_container_width=True)
             
             # Check if form was submitted
-            if submitted:
-                # Process form submission
+            if submit_clicked:
+                # Process form submission only if the button was clicked
                 if not expense_name:
                     st.error("Please enter an expense name.")
                 elif amount <= 0:
