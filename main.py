@@ -1,208 +1,32 @@
 import streamlit as st
-
-# Set page config as the first Streamlit command
-st.set_page_config(
-    page_title="Expense Tracker",
-    page_icon="✦",
-    layout="wide"
-)
-
-# Import analytics after setting page config
-import analytics
-
-# Rest of your imports
 import requests
 import json
 from datetime import datetime, timedelta
-import pandas as pd
-from langchain_google_genai import ChatGoogleGenerativeAI
-import os
 
-# Set API key directly in the code
-os.environ["GOOGLE_API_KEY"] = "AIzaSyDRrTvYX6F7EJUK789Yz0IQcMMbjCRXwso"
+# Set page config
+st.set_page_config(page_title="Expense Tracker", page_icon="✦", layout="wide")
 
-# Initialize session state variables if they don't exist
-if 'predicted_category' not in st.session_state:
-    st.session_state['predicted_category'] = ""
-if 'category_predicted' not in st.session_state:
-    st.session_state['category_predicted'] = ""
-if 'form_submitted' not in st.session_state:
-    st.session_state['form_submitted'] = False
-if 'reset_form' not in st.session_state:
-    st.session_state['reset_form'] = False
+# Initialize variables in session state
 if 'debug_mode' not in st.session_state:
     st.session_state['debug_mode'] = False
-if 'last_amount' not in st.session_state:
-    st.session_state['last_amount'] = 0.0
-if 'last_split_between' not in st.session_state:
-    st.session_state['last_split_between'] = 2
 
-# Function to predict category
-def predict_category(expense_name):
-    if expense_name and st.session_state.get('category_predicted') != expense_name:
-        with st.spinner("Predicting category..."):
-            try:
-                predicted_category = get_category_prediction(expense_name)
-                st.session_state['predicted_category'] = predicted_category
-                st.session_state['category_predicted'] = expense_name
-            except Exception as e:
-                st.error(f"Error predicting category: {str(e)}")
-                st.session_state['predicted_category'] = "Miscellaneous"
-
-# Callback for expense name change
-def on_expense_name_change():
-    # Only trigger prediction if there's text
-    if st.session_state.expense_name_input:
-        predict_category(st.session_state.expense_name_input)
-
-# Function to update split amount when amount or split_between changes
-def update_split_amount():
-    # Get current values from session state
-    current_amount = st.session_state.get('amount_input', 0.0)
-    current_split_between = st.session_state.get('split_between_input', 2)
+# Function to get billing cycle
+def get_billing_cycle(date_obj):
+    day = date_obj.day
     
-    # Calculate new split amount if we have valid inputs
-    if current_amount > 0 and current_split_between > 0:
-        st.session_state['calculated_split_amount'] = round(current_amount / current_split_between, 2)
-        # Update last values for change detection
-        st.session_state['last_amount'] = current_amount
-        st.session_state['last_split_between'] = current_split_between
-        # Force a rerun to update the UI
-        st.rerun()
-
-# Function to reset the form
-def reset_form():
-    # Clear all input fields
-    for key in list(st.session_state.keys()):
-        if key not in ['debug_mode'] and key.endswith('_input'):
-            if key in st.session_state:
-                del st.session_state[key]
-        if key in ['predicted_category', 'category_predicted', 'calculated_split_amount']:
-            st.session_state[key] = ""
+    if day < 16:
+        last_month = date_obj.replace(day=1) - timedelta(days=1)
+        start_month = last_month.replace(day=25)
+        end_month = date_obj.replace(day=25)
+    else:
+        start_month = date_obj.replace(day=25)
+        next_month = date_obj.replace(day=28) + timedelta(days=4)
+        end_month = next_month.replace(day=25)
     
-    # Reset tracking variables
-    st.session_state['last_amount'] = 0.0
-    st.session_state['last_split_between'] = 2
+    start_month_str = start_month.strftime("%b")
+    end_month_str = end_month.strftime("%b")
     
-    # Force a rerun
-    st.rerun()
-
-# Function to handle form submission
-def handle_expense_submission():
-    # Get all values from session state
-    expense_name = st.session_state.get('expense_name_input', "")
-    category = st.session_state.get('category_input', "Miscellaneous")
-    amount = st.session_state.get('amount_input', 0.0)
-    date = st.session_state.get('date_input', datetime.now().date())
-    payment_method = st.session_state.get('payment_method_input', "Cash")
-    shared = st.session_state.get('shared_input', False)
-    
-    # Validate inputs
-    if not expense_name:
-        st.error("Please enter an expense name.")
-        return
-    
-    if amount <= 0:
-        st.error("Amount must be greater than 0.")
-        return
-    
-    # Calculate final amount for shared expenses
-    final_amount = amount
-    original_amount = amount
-    
-    if shared:
-        split_between = st.session_state.get('split_between_input', 1)
-        split_amount = st.session_state.get('split_amount_input', 0.0)
-        
-        # If no split amount but we can calculate it
-        if split_amount == 0.0 and amount > 0 and split_between > 1:
-            split_amount = round(amount / split_between, 2)
-        
-        # Use split amount as final amount
-        if split_amount > 0:
-            final_amount = split_amount
-    
-    # Prepare data for submission
-    data = {
-        "expenseName": expense_name,
-        "category": category,
-        "amount": final_amount,
-        "originalAmount": original_amount,
-        "date": date.strftime("%Y-%m-%d"),
-        "month": date.strftime("%B"),
-        "year": date.year,
-        "paymentMethod": payment_method,
-        "shared": "Yes" if shared else "No",
-        "billingCycle": get_billing_cycle(date) if payment_method == "Credit card" else "",
-        "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    # Add split details if this is a shared expense
-    if shared:
-        data["splitBetween"] = st.session_state.get('split_between_input', 1)
-        data["splitAmount"] = split_amount
-    
-    # Submit to Google Apps Script
-    with st.spinner("Adding expense..."):
-        response = submit_to_google_apps_script(data)
-        
-        if response.get("status") == "success":
-            st.success("Expense added successfully!")
-            # Reset form
-            reset_form()
-        else:
-            st.error(f"Error: {response.get('message', 'Unknown error')}")
-            st.error("Please check the Debug tab for more information.")
-
-# Function to get category prediction from Gemini model
-def get_category_prediction(expense_name):
-    api_key = os.environ.get("GOOGLE_API_KEY")
-    
-    if not api_key:
-        return "Miscellaneous"
-    
-    try:
-        model = ChatGoogleGenerativeAI(
-            model="gemini-1.5-pro",
-            google_api_key=api_key
-        )
-        
-        prompt = f"""
-        Classify the following expense into one of these categories:
-        - Bike
-        - Auto/Cab
-        - Public transport
-        - Groceries
-        - Eating out
-        - Party
-        - Household supplies
-        - Education
-        - Gift
-        - Cinema
-        - Entertainment
-        - Rent/Maintenance
-        - Furniture
-        - Services
-        - Electricity
-        - Internet
-        - Investment
-        - Insurance
-        - Medical expenses
-        - Flights
-        - Travel
-        - Clothes
-        - Gas
-        - Phone
-        
-        Expense: {expense_name}
-        
-        Return only the category name, nothing else.
-        """
-        response = model.invoke(prompt)
-        return response.content.strip()
-    except Exception as e:
-        st.error(f"Error with Gemini API: {str(e)}")
-        return "Miscellaneous"
+    return f"{start_month_str} 25 - {end_month_str} 25"
 
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
@@ -242,169 +66,125 @@ def submit_to_google_apps_script(data):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-# Function to get billing cycle based on date
-def get_billing_cycle(date_obj):
-    day = date_obj.day
-    
-    if day < 16:
-        last_month = date_obj.replace(day=1) - timedelta(days=1)
-        start_month = last_month.replace(day=25)
-        end_month = date_obj.replace(day=25)
-    else:
-        start_month = date_obj.replace(day=25)
-        next_month = date_obj.replace(day=28) + timedelta(days=4)
-        end_month = next_month.replace(day=25)
-    
-    start_month_str = start_month.strftime("%b")
-    end_month_str = end_month.strftime("%b")
-    
-    return f"{start_month_str} 25 - {end_month_str} 25"
+# Reset form fields
+def reset_form():
+    for key in list(st.session_state.keys()):
+        if key not in ['debug_mode'] and key.endswith('_input'):
+            if key in st.session_state:
+                del st.session_state[key]
 
-# Main app
 def main():
-    # CSS for styling
-    st.markdown("""
-    <style>
-    /* Custom CSS for styling */
-    .add-expense-btn {
-        margin-top: 20px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Create tabs for the app
+    # Create tabs
     tab1, tab2, tab3 = st.tabs(["New Expense", "Trends", "Debug"])
     
     with tab1:
-        # Zen header
-        st.markdown("""
-        <div class="zen-header">
-            <span class="zen-icon">💸</span>
-            <h1>Small Expense Tracker</h1>
-            <p>Track spending fast with clarity</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Header
+        st.title("Small Expense Tracker")
+        st.write("Track spending fast with clarity")
         
-        # Create a container for all inputs (NO FORM - key difference)
-        with st.container():
-            # Expense name input WITH category prediction callback
-            expense_name = st.text_input(
-                "Expense name", 
-                key="expense_name_input", 
-                on_change=on_expense_name_change
-            )
+        # Basic input fields
+        expense_name = st.text_input("Expense name", key="expense_name_input")
+        
+        # Categories
+        categories = [
+            "Miscellaneous", "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", 
+            "Party", "Household supplies", "Education", "Gift", "Cinema", "Entertainment", 
+            "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", 
+            "Insurance", "Medical expenses", "Flights", "Travel", "Clothes", "Gas", "Phone"
+        ]
+        
+        # Create two columns for inputs
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            category = st.selectbox("Category", categories, key="category_input")
+            payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
+            payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
+        
+        with col2:
+            amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
+            date = st.date_input("Date", value=datetime.now().date(), key="date_input")
+        
+        # Shared expense checkbox
+        shared = st.checkbox("Shared expense", key="shared_input")
+        
+        # Show split options if shared expense is checked
+        if shared:
+            split_col1, split_col2 = st.columns(2)
             
-            # Trigger prediction if expense name exists but prediction hasn't been made
-            if expense_name and not st.session_state.get('category_predicted'):
-                predict_category(expense_name)
+            with split_col1:
+                split_between = st.number_input("Split between (number of people)", min_value=1, value=2, step=1, key="split_between_input")
             
-            # All possible categories
-            categories = [
-                "Bike", "Auto/Cab", "Public transport", "Groceries", "Eating out", "Party", "Household supplies", "Education", "Gift", 
-                "Cinema", "Entertainment", "Rent/Maintenance", "Furniture", "Services", "Electricity", "Internet", "Investment", "Insurance", 
-                "Medical expenses", "Flights", "Travel", "Clothes", "Gas", "Phone", "Miscellaneous"
-            ]
-            
-            # Default to predicted category if available
-            default_category = st.session_state.get('predicted_category', "Miscellaneous")
-            default_index = categories.index(default_category) if default_category in categories else categories.index("Miscellaneous")
-            
-            # Category selection
-            category = st.selectbox("Category", categories, index=default_index, key="category_input")
-            
-            # Layout in columns
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Payment method
-                payment_methods = ["Cred UPI", "Credit card", "GPay UPI", "Pine Perks", "Cash", "Debit card", "Net Banking"]
-                payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
+            with split_col2:
+                # Calculate default split amount
+                if amount > 0 and split_between > 0:
+                    default_split = amount / split_between
+                else:
+                    default_split = 0.0
                 
-                # Amount input with on_change callback to update split amount
-                amount = st.number_input(
-                    "Amount (₹)", 
-                    min_value=0.0, 
-                    step=0.01, 
-                    format="%.2f", 
-                    key="amount_input",
-                    on_change=update_split_amount  # This updates the split amount when amount changes
-                )
+                split_amount = st.number_input("Split Amount (₹)", min_value=0.0, value=default_split, format="%.2f", key="split_amount_input")
             
-            with col2:
-                # Date with calendar component
-                today = datetime.now().date()
-                date = st.date_input("Date", value=today, key="date_input")
+            # Display calculation
+            if amount > 0 and split_between > 1:
+                st.info(f"Split Amount = {amount:.2f} ÷ {split_between} = {default_split:.2f}")
+        
+        # Credit card billing cycle
+        if payment_method == "Credit card":
+            billing_cycle = get_billing_cycle(date)
+            st.info(f"Billing Cycle: {billing_cycle}")
+        
+        # Add expense button outside of any form
+        if st.button("Add expense", use_container_width=True, key="add_expense_button"):
+            if not expense_name:
+                st.error("Please enter an expense name.")
+            elif amount <= 0:
+                st.error("Amount must be greater than 0.")
+            else:
+                # Calculate final amount
+                final_amount = amount
+                original_amount = amount
                 
-                # Shared expense checkbox
-                shared = st.checkbox("Shared expense", key="shared_input")
-            
-            # Split options shown conditionally
-            if shared:
-                st.write("Split options")
-                split_col1, split_col2 = st.columns(2)
+                if shared:
+                    # Use split amount if provided
+                    split_amount_value = st.session_state.get('split_amount_input', 0.0)
+                    if split_amount_value > 0:
+                        final_amount = split_amount_value
                 
-                with split_col1:
-                    # Split between input with on_change callback
-                    split_between = st.number_input(
-                        "Split between (number of people)", 
-                        min_value=1, 
-                        value=2, 
-                        step=1, 
-                        key="split_between_input",
-                        on_change=update_split_amount  # This updates the split amount when split_between changes
-                    )
+                # Prepare data for submission
+                data = {
+                    "expenseName": expense_name,
+                    "category": category,
+                    "amount": final_amount,
+                    "originalAmount": original_amount,
+                    "date": date.strftime("%Y-%m-%d"),
+                    "month": date.strftime("%B"),
+                    "year": date.year,
+                    "paymentMethod": payment_method,
+                    "shared": "Yes" if shared else "No",
+                    "billingCycle": get_billing_cycle(date) if payment_method == "Credit card" else "",
+                    "timeStamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
                 
-                with split_col2:
-                    # Get the calculated split amount (updated by callbacks)
-                    calculated_split = st.session_state.get('calculated_split_amount', 0.0)
+                # Add split details if shared expense
+                if shared:
+                    data["splitBetween"] = split_between
+                    data["splitAmount"] = split_amount_value
+                
+                # Submit to Google Apps Script
+                with st.spinner("Adding expense..."):
+                    response = submit_to_google_apps_script(data)
                     
-                    # If not yet calculated but we have values, calculate it now
-                    if calculated_split == 0.0 and amount > 0 and split_between > 0:
-                        calculated_split = round(amount / split_between, 2)
-                        st.session_state['calculated_split_amount'] = calculated_split
-                    
-                    # Split amount field
-                    split_amount = st.number_input(
-                        "Split Amount (₹)", 
-                        min_value=0.0, 
-                        value=calculated_split, 
-                        format="%.2f", 
-                        key="split_amount_input"
-                    )
-                
-                # Show calculation formula
-                if amount > 0 and split_between > 1:
-                    st.info(f"Split Amount = {amount:.2f} ÷ {split_between} = {calculated_split:.2f}")
-            
-            # Billing cycle (if Credit Card is selected)
-            if payment_method == "Credit card":
-                billing_cycle = get_billing_cycle(date)
-                st.markdown(f"""
-                <div class="info-box">
-                    <strong>Billing Cycle:</strong> {billing_cycle}
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Submit button (NOT in a form)
-            if st.button("Add expense", key="submit_button", use_container_width=True):
-                handle_expense_submission()
-            
-            # Check if amount or split_between changed and we need to update calculated_split_amount
-            new_amount = st.session_state.get('amount_input', 0.0)
-            new_split_between = st.session_state.get('split_between_input', 2)
-            
-            # If either value changed and we have shared expense checked
-            if shared and (new_amount != st.session_state['last_amount'] or new_split_between != st.session_state['last_split_between']):
-                # Update the split amount for next render if we have valid values
-                if new_amount > 0 and new_split_between > 0:
-                    calculated_split = round(new_amount / new_split_between, 2)
-                    st.session_state['calculated_split_amount'] = calculated_split
-                    st.session_state['last_amount'] = new_amount
-                    st.session_state['last_split_between'] = new_split_between
+                    if response.get("status") == "success":
+                        st.success("Expense added successfully!")
+                        reset_form()
+                        st.rerun()
+                    else:
+                        st.error(f"Error: {response.get('message', 'Unknown error')}")
+                        st.error("Please check the Debug tab for more information.")
     
     with tab2:
-        # Create analytics view
-        analytics.show_analytics()
+        st.title("Trends")
+        st.write("Analytics view will be shown here.")
     
     with tab3:
         st.header("Debug Information")
@@ -412,11 +192,6 @@ def main():
         
         # Toggle for debug mode
         st.session_state['debug_mode'] = st.checkbox("Enable Debug Mode", value=st.session_state['debug_mode'])
-        
-        # Show session state for debugging
-        if st.session_state['debug_mode']:
-            st.write("Session State:")
-            st.write({k: v for k, v in st.session_state.items() if not k.startswith('_')})
         
         if st.button("Test Connection to Google Apps Script"):
             with st.spinner("Testing connection..."):
