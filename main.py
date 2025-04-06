@@ -2,6 +2,8 @@ import streamlit as st
 import requests
 import json
 from datetime import datetime, timedelta
+# Import the analytics functionality
+from analytics import show_analytics  # Add this import statement
 
 # Set page config
 st.set_page_config(page_title="Expense Tracker", page_icon="✦", layout="wide")
@@ -183,8 +185,8 @@ def main():
                         st.error("Please check the Debug tab for more information.")
     
     with tab2:
-        st.title("Trends")
-        st.write("Analytics view will be shown here.")
+        # Replace the placeholder with the call to show_analytics
+        show_analytics()  # Call the analytics function from the imported module
     
     with tab3:
         st.header("Debug Information")
