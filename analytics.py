@@ -363,15 +363,17 @@ def show_analytics():
                         lambda x: f"{x['paymentMethod']}: ₹{x['amount']:,.2f} ({x['percentage']}%)", axis=1
                     )
                     
-                    # Create donut chart
+                    # Create donut chart with simple category names for display on chart
                     fig_donut = go.Figure(data=[go.Pie(
-                        labels=payment_totals['label'],
+                        labels=payment_totals['paymentMethod'],  # Use only payment method names
                         values=payment_totals['amount'],
                         hole=0.5,
-                        textinfo='label',  # Changed from 'percent' to 'label'
+                        textinfo='label',  # Show just the payment method name
                         textposition='inside',  # Ensure text is positioned inside the slices
                         insidetextorientation='radial',  # Orient text radially for better readability
-                        marker_colors=px.colors.qualitative.Set3
+                        marker_colors=px.colors.qualitative.Set3,
+                        hoverinfo='label+percent+value',  # Show detailed info on hover
+                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}'
                     )])
                     
                     # Customize the theme to match dark mode and improve mobile responsiveness
@@ -423,15 +425,17 @@ def show_analytics():
                     # Extract colors in the same order as themes
                     color_sequence = [theme_colors.get(theme, "#9E9E9E") for theme in theme_totals['theme']]
                     
-                    # Create pie chart for themes
+                    # Create pie chart for themes with simple theme names for display on chart
                     fig_theme = go.Figure(data=[go.Pie(
-                        labels=theme_totals['label'],
+                        labels=theme_totals['theme'],  # Use only theme names
                         values=theme_totals['amount'],
                         hole=0.4,
-                        textinfo='label',  # Changed from 'percent' to 'label'
+                        textinfo='label',  # Show just the theme name
                         textposition='inside',  # Ensure text is positioned inside the slices
                         insidetextorientation='radial',  # Orient text radially for better readability
-                        marker_colors=color_sequence
+                        marker_colors=color_sequence,
+                        hoverinfo='label+percent+value',  # Show detailed info on hover
+                        hovertemplate='%{label}<br>₹%{value:.2f}<br>%{percent}'
                     )])
                     
                     # Customize the theme to match dark mode and improve mobile responsiveness
