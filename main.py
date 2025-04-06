@@ -10,9 +10,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize debug mode
+# Initialize session state variables
 if 'debug_mode' not in st.session_state:
     st.session_state['debug_mode'] = False
+if 'prev_amount' not in st.session_state:
+    st.session_state['prev_amount'] = 0.0
+if 'prev_split_between' not in st.session_state:
+    st.session_state['prev_split_between'] = 2
 
 # Function to get billing cycle based on date
 def get_billing_cycle(date_obj):
@@ -142,7 +146,7 @@ def main():
                 with split_col2:
                     # Automatically calculate split amount
                     default_split = round(amount / split_between, 2) if amount > 0 else 0.0
-                    split_amount = st.number_input("Your share (₹)", min_value=0.0, value=default_split, format="%.2f", key="split_amount_input")
+                    split_amount = st.number_input("Split Amount (₹)", min_value=0.0, value=default_split, format="%.2f", key="split_amount_input")
                 
                 # Display split info
                 if amount > 0 and split_between > 1:
@@ -167,6 +171,20 @@ def main():
             # Submit button at the very end of the form
             submitted = st.form_submit_button("Add expense")
         
+        # Check if amount or split_between changed and update split amount
+        current_amount = st.session_state.get('amount_input', 0.0)
+        current_split_between = st.session_state.get('split_between_input', 2)
+        
+        # If amount or split between changed and shared expense is checked, update split amount for next render
+        if shared and (current_amount != st.session_state['prev_amount'] or current_split_between != st.session_state['prev_split_between']):
+            if current_amount > 0 and current_split_between > 0:
+                st.session_state['split_amount_input'] = round(current_amount / current_split_between, 2)
+            # Update the previous values
+            st.session_state['prev_amount'] = current_amount
+            st.session_state['prev_split_between'] = current_split_between
+            # Force a rerun to show the updated split amount
+            st.rerun()
+            
         # Handle form submission outside the form
         if submitted:
             if not expense_name:
