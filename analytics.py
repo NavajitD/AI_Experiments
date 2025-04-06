@@ -369,7 +369,7 @@ def show_analytics():
                         values=payment_totals['amount'],
                         hole=0.5,
                         textinfo='label',  # Show the label text instead of just percentage
-                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}',
+                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}<extra></extra>',  # Removed "trace 0" with <extra></extra>
                         marker_colors=px.colors.qualitative.Set3
                     )])
                     
@@ -428,7 +428,7 @@ def show_analytics():
                         values=theme_totals['amount'],
                         hole=0.4,
                         textinfo='label',  # Show the label text instead of just percentage
-                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}',
+                        hovertemplate='%{label}<br>Amount: ₹%{value:.2f}<br>%{percent}<extra></extra>',  # Removed "trace 0" with <extra></extra>
                         marker_colors=color_sequence
                     )])
                     
