@@ -32,10 +32,10 @@ if 'reset_form' not in st.session_state:
     st.session_state['reset_form'] = False
 if 'debug_mode' not in st.session_state:
     st.session_state['debug_mode'] = False
-if 'prev_amount' not in st.session_state:
-    st.session_state['prev_amount'] = 0.0
-if 'prev_split_between' not in st.session_state:
-    st.session_state['prev_split_between'] = 2
+if 'last_amount' not in st.session_state:
+    st.session_state['last_amount'] = 0.0
+if 'last_split_between' not in st.session_state:
+    st.session_state['last_split_between'] = 2
 
 # Function to predict category
 def predict_category(expense_name):
@@ -54,16 +54,6 @@ def on_expense_name_change():
     # Only trigger prediction if there's text
     if st.session_state.expense_name_input:
         predict_category(st.session_state.expense_name_input)
-
-# Function to reset the form
-def reset_form():
-    for key in list(st.session_state.keys()):
-        if key not in ['debug_mode'] and key.endswith('_input'):
-            if key in st.session_state:
-                del st.session_state[key]
-        if key in ['predicted_category', 'category_predicted']:
-            st.session_state[key] = ""
-    st.rerun()
 
 # Function to get category prediction from Gemini model
 def get_category_prediction(expense_name):
@@ -114,6 +104,22 @@ def get_category_prediction(expense_name):
     except Exception as e:
         st.error(f"Error with Gemini API: {str(e)}")
         return "Miscellaneous"
+
+# Function to reset the form
+def reset_form():
+    for key in list(st.session_state.keys()):
+        if key not in ['debug_mode'] and key.endswith('_input'):
+            if key in st.session_state:
+                del st.session_state[key]
+        if key in ['predicted_category', 'category_predicted', 'last_amount', 'last_split_between']:
+            st.session_state[key] = ""
+    
+    # Reset these specifically
+    st.session_state['last_amount'] = 0.0
+    st.session_state['last_split_between'] = 2
+    
+    # Force a rerun
+    st.rerun()
 
 # Function to submit data to Google Apps Script
 def submit_to_google_apps_script(data):
@@ -232,6 +238,10 @@ def main():
                     payment_method = st.selectbox("Payment method", payment_methods, key="payment_method_input")
                 
                 with col2:
+                    # Store the current amount value before the widget is rendered
+                    current_amount = st.session_state.get('amount_input', 0.0)
+                    
+                    # Amount input
                     amount = st.number_input("Amount (₹)", min_value=0.0, step=0.01, format="%.2f", key="amount_input")
                     
                     # Date with calendar component
@@ -244,31 +254,10 @@ def main():
                     split_col1, split_col2 = st.columns(2)
                     
                     with split_col1:
-                        split_between = st.number_input(
-                            "Split between (number of people)", 
-                            min_value=1, 
-                            value=2, 
-                            step=1, 
-                            key="split_between_input"
-                        )
-                    
-                    # Check if amount or split_between has changed
-                    current_amount = amount
-                    current_split_between = split_between
-                    
-                    # If either has changed, force a rerun to update the split amount
-                    if (current_amount != st.session_state['prev_amount'] or 
-                        current_split_between != st.session_state['prev_split_between']) and shared:
+                        # Store the current split_between value before the widget is rendered
+                        current_split_between = st.session_state.get('split_between_input', 2)
                         
-                        # Update previous values
-                        st.session_state['prev_amount'] = current_amount
-                        st.session_state['prev_split_between'] = current_split_between
-                        
-                        # Only force rerun if amount is valid
-                        if current_amount > 0:
-                            st.rerun()
-                    
-                    with split_col1:
+                        # Split between input
                         split_between = st.number_input(
                             "Split between (number of people)", 
                             min_value=1, 
@@ -278,10 +267,14 @@ def main():
                         )
                     
                     with split_col2:
-                        # Calculate split amount based on current form values
-                        calculated_split = round(amount / split_between, 2) if amount > 0 and split_between > 0 else 0.0
+                        # Calculate split amount based on current values
+                        # If amount or split_between has changed, update calculated_split
+                        if amount > 0 and split_between > 0:
+                            calculated_split = round(amount / split_between, 2)
+                        else:
+                            calculated_split = 0.0
                         
-                        # Use calculated_split directly as the value
+                        # Split amount field
                         split_amount = st.number_input(
                             "Split Amount (₹)", 
                             min_value=0.0, 
@@ -303,11 +296,28 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Submit button at the very end of the form
-                submitted = st.form_submit_button("Add expense")
+                # Invisible submit
+                submitted = st.form_submit_button("Add expense", use_container_width=True)
+                
+                # Spacer
+                st.write("")
+                st.write("")
+                
+                # The visible submit button (this one doesn't actually submit the form)
+                # It's just a visual button
+                st.markdown("<div style='text-align: center;'><button class='stButton'>Add expense</button></div>", unsafe_allow_html=True)
             
-            # Handle form submission
-            if submitted:
+            # Additional button outside the form to trigger submission
+            if st.button("Add expense", use_container_width=True):
+                # Manually trigger form submission
+                st.session_state['form_submitted'] = True
+            
+            # Check if form was submitted via Enter key
+            if submitted or st.session_state.get('form_submitted', False):
+                # Reset form submission flag
+                st.session_state['form_submitted'] = False
+                
+                # Process form submission
                 if not expense_name:
                     st.error("Please enter an expense name.")
                 elif amount <= 0:
@@ -322,7 +332,7 @@ def main():
                         split_between = st.session_state.get('split_between_input', 1)
                         split_amount = st.session_state.get('split_amount_input', 0.0)
                         
-                        # If still not found, calculate it
+                        # If no split amount is provided but we can calculate it
                         if split_amount == 0.0 and amount > 0 and split_between > 1:
                             split_amount = round(amount / split_between, 2)
                         
@@ -360,6 +370,20 @@ def main():
                         else:
                             st.error(f"Error: {response.get('message', 'Unknown error')}")
                             st.error("Please check the Debug tab for more information.")
+            
+            # Check if amount or split_between changed and we need to update the UI
+            new_amount = st.session_state.get('amount_input', 0.0)
+            new_split_between = st.session_state.get('split_between_input', 2)
+            
+            # If values changed and shared expense is checked, force a rerun
+            if shared and (new_amount != st.session_state['last_amount'] or new_split_between != st.session_state['last_split_between']):
+                # Update tracking variables
+                st.session_state['last_amount'] = new_amount
+                st.session_state['last_split_between'] = new_split_between
+                
+                # Only rerun if we have valid inputs
+                if new_amount > 0 and new_split_between > 0:
+                    st.rerun()
     
     with tab2:
         # Create analytics view
@@ -371,6 +395,11 @@ def main():
         
         # Toggle for debug mode
         st.session_state['debug_mode'] = st.checkbox("Enable Debug Mode", value=st.session_state['debug_mode'])
+        
+        # Show session state for debugging
+        if st.session_state['debug_mode']:
+            st.write("Session State:")
+            st.write({k: v for k, v in st.session_state.items() if not k.startswith('_')})
         
         if st.button("Test Connection to Google Apps Script"):
             with st.spinner("Testing connection..."):
