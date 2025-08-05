@@ -172,7 +172,34 @@ def show_analytics():
             current_month = now.month
             current_year = now.year
             
-            # Filter data based on selection (moved earlier to use in metrics)
+            # Add space before filters
+            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
+            
+            # Add filters without header - CREATE FILTERS FIRST
+            filter_col1, filter_col2 = st.columns([1, 1])
+            
+            # Add "All" option for month and year filters
+            with filter_col1:
+                month_options_with_all = ["All"] + sorted(month_options, 
+                                  key=lambda x: list(calendar.month_name).index(x) if x in calendar.month_name else 0)
+                current_month_name = calendar.month_name[current_month]
+                
+                selected_month = st.selectbox(
+                    "Select Month", 
+                    options=month_options_with_all,
+                    index=month_options_with_all.index(current_month_name) if current_month_name in month_options_with_all else 0
+                )
+            
+            with filter_col2:
+                year_options_with_all = ["All"] + sorted(year_options)
+                
+                selected_year = st.selectbox(
+                    "Select Year",
+                    options=year_options_with_all,
+                    index=year_options_with_all.index(current_year) if current_year in year_options_with_all[1:] else 0
+                )
+            
+            # NOW Filter data based on selection
             filtered_df = df.copy()
             
             # Apply month filter if not "All"
@@ -270,33 +297,6 @@ def show_analytics():
                         <div>No expenses for {period_label}</div>
                     </div>
                     """, unsafe_allow_html=True)
-            
-            # Add space before filters
-            st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
-            
-            # Add filters without header
-            filter_col1, filter_col2 = st.columns([1, 1])
-            
-            # Add "All" option for month and year filters
-            with filter_col1:
-                month_options_with_all = ["All"] + sorted(month_options, 
-                                  key=lambda x: list(calendar.month_name).index(x) if x in calendar.month_name else 0)
-                current_month_name = calendar.month_name[current_month]
-                
-                selected_month = st.selectbox(
-                    "Select Month", 
-                    options=month_options_with_all,
-                    index=month_options_with_all.index(current_month_name) if current_month_name in month_options_with_all else 0
-                )
-            
-            with filter_col2:
-                year_options_with_all = ["All"] + sorted(year_options)
-                
-                selected_year = st.selectbox(
-                    "Select Year",
-                    options=year_options_with_all,
-                    index=year_options_with_all.index(current_year) if current_year in year_options_with_all[1:] else 0
-                )
             
             st.markdown("</div>", unsafe_allow_html=True)
             
