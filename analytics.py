@@ -172,39 +172,57 @@ def show_analytics():
             current_month = now.month
             current_year = now.year
             
+            # Filter data based on selection (moved earlier to use in metrics)
+            filtered_df = df.copy()
+            
+            # Apply month filter if not "All"
+            if selected_month != "All":
+                selected_month_num = list(calendar.month_name).index(selected_month)
+                filtered_df = filtered_df[filtered_df['month'] == selected_month_num]
+                
+            # Apply year filter if not "All"
+            if selected_year != "All":
+                filtered_df = filtered_df[filtered_df['year'] == selected_year]
+            
+            # Create period label for metrics
+            if selected_month != "All" and selected_year != "All":
+                period_label = f"{selected_month} {selected_year}"
+                metric_title = f"Total Spent - {selected_month}"
+            elif selected_month != "All":
+                period_label = f"{selected_month} (All Years)"
+                metric_title = f"Total Spent - {selected_month}"
+            elif selected_year != "All":
+                period_label = f"All Months {selected_year}"
+                metric_title = f"Total Spent - {selected_year}"
+            else:
+                period_label = "All Time"
+                metric_title = "Total Spent - All Time"
+            
             # Create layout with three columns for the metrics
             col1, col2, col3 = st.columns(3)
             
-            # Ensure the DataFrame is properly populated before accessing
-            df_current_month = df[(df['month'] == current_month) & (df['year'] == current_year)]
-            
-            # 1. Dynamic tracker of total amount spent in current month till date
+            # 1. Dynamic tracker of total amount spent based on selected filters
             with col1:
-                total_spent = df_current_month['amount'].sum() if not df_current_month.empty else 0
+                total_spent = filtered_df['amount'].sum() if not filtered_df.empty else 0
                 st.markdown(f"""
                 <div class="metric-container">
-                    <div class="metric-label">Total Spent This Month</div>
+                    <div class="metric-label">{metric_title}</div>
                     <div class="metric-value">₹{total_spent:,.2f}</div>
-                    <div>Month to Date: {calendar.month_name[current_month]} {current_year}</div>
+                    <div>{period_label}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
-            # Average daily expense - FIX: Calculate based on actual expense date range
+            # Average daily expense based on filtered data
             with col2:
-                if not df_current_month.empty:
-                    # Get the earliest date with an expense this month
-                    first_expense_date = df_current_month['date'].min().date()
+                if not filtered_df.empty:
+                    # Get the earliest and latest dates in filtered data
+                    first_expense_date = filtered_df['date'].min().date()
+                    last_expense_date = filtered_df['date'].max().date()
                     
-                    # For the end date, use the latest transaction date instead of today
-                    # This ensures we count all days with transactions
-                    last_expense_date = df_current_month['date'].max().date()
-                    today_date = now.date()
-                    
-                    # Calculate inclusive date range (first day to last day inclusive)
-                    # Add 1 to include both start and end dates in the count
+                    # Calculate inclusive date range
                     days_in_range = (last_expense_date - first_expense_date).days + 1
                     
-                    # Safety check to avoid division by zero and ensure minimum of 1 day
+                    # Safety check to avoid division by zero
                     if days_in_range < 1:
                         days_in_range = 1
                 else:
@@ -219,24 +237,37 @@ def show_analytics():
                 </div>
                 """, unsafe_allow_html=True)
                 
-            # Top spending category
+            # Top spending category (skip Rent/Maintenance if it's the highest)
             with col3:
-                if not df_current_month.empty:
-                    top_category = df_current_month.groupby('category')['amount'].sum().idxmax()
-                    top_amount = df_current_month.groupby('category')['amount'].sum().max()
+                if not filtered_df.empty:
+                    category_amounts = filtered_df.groupby('category')['amount'].sum().sort_values(ascending=False)
+                    
+                    # Check if top category is Rent/Maintenance and get next highest if so
+                    if len(category_amounts) > 0:
+                        top_category = category_amounts.index[0]
+                        top_amount = category_amounts.iloc[0]
+                        
+                        # If top category is Rent/Maintenance and there are other categories, show the next one
+                        if top_category == "Rent/Maintenance" and len(category_amounts) > 1:
+                            top_category = category_amounts.index[1]
+                            top_amount = category_amounts.iloc[1]
+                            category_note = "(Next highest after Rent)"
+                        else:
+                            category_note = ""
+                    
                     st.markdown(f"""
                     <div class="metric-container">
                         <div class="metric-label">Top Spending Category</div>
                         <div class="metric-value">{top_category}</div>
-                        <div>₹{top_amount:,.2f}</div>
+                        <div>₹{top_amount:,.2f} {category_note}</div>
                     </div>
                     """, unsafe_allow_html=True)
                 else:
-                    st.markdown("""
+                    st.markdown(f"""
                     <div class="metric-container">
                         <div class="metric-label">Top Spending Category</div>
                         <div class="metric-value">No Data</div>
-                        <div>No expenses recorded this month</div>
+                        <div>No expenses for {period_label}</div>
                     </div>
                     """, unsafe_allow_html=True)
             
@@ -267,89 +298,209 @@ def show_analytics():
                     index=year_options_with_all.index(current_year) if current_year in year_options_with_all[1:] else 0
                 )
             
-            # Filter data based on selection
-            filtered_df = df.copy()
-            
-            # Apply month filter if not "All"
-            if selected_month != "All":
-                selected_month_num = list(calendar.month_name).index(selected_month)
-                filtered_df = filtered_df[filtered_df['month'] == selected_month_num]
-                
-            # Apply year filter if not "All"
-            if selected_year != "All":
-                filtered_df = filtered_df[filtered_df['year'] == selected_year]
-            
-            # Create day-of-month based week aggregation for the filtered data
-            weekly_category = filtered_df.groupby(['year', 'month', 'day_week', 'category'])['amount'].sum().reset_index()
-            
-            if not weekly_category.empty:
-                # Create week labels showing the day range in the month
-                weekly_category['week_label'] = weekly_category.apply(
-                    lambda x: f"{x['day_week']} {calendar.month_name[x['month']][:3]} {x['year']}", axis=1
-                )
-                
-                # Create a sort key based on year, month, and day range
-                weekly_category['sort_key'] = weekly_category.apply(
-                    lambda x: f"{x['year']:04d}{x['month']:02d}{int(x['day_week'].split('-')[0]):02d}", axis=1
-                )
-                
-                # Sort by the combined key for proper chronological order
-                weekly_category = weekly_category.sort_values('sort_key')
-            
             st.markdown("</div>", unsafe_allow_html=True)
             
             # Add some space before the trends section
             st.markdown("<br>", unsafe_allow_html=True)
             
-
-            
             # Trends section header
             st.markdown("<hr style='margin: 30px 0;'>", unsafe_allow_html=True)
-            st.header("📊 Expense Trends")
+            st.header("📊 Expense Analysis")
             
             # Create sub-tabs for different trend visualizations
-            trend_tabs = st.tabs(["Weekly Category Trends", "Payment Methods", "Expense Themes"])
+            trend_tabs = st.tabs(["Category Breakdown", "Trends Over Time", "Payment Methods", "Expense Themes"])
             
             with trend_tabs[0]:
-                # 2. Week-wise graph of amount spent per category (original line chart)
-                if not weekly_category.empty:
-                    # Create the line chart with Plotly using category_orders to enforce order
-                    week_labels = weekly_category['week_label'].unique()
+                # NEW: Category breakdown view
+                st.subheader("💳 Spend by Category")
+                
+                if not filtered_df.empty:
+                    # Aggregate expenses by category
+                    category_totals = filtered_df.groupby('category')['amount'].sum().reset_index()
+                    category_totals = category_totals.sort_values('amount', ascending=False)
                     
-                    fig_weekly = px.line(
-                        weekly_category, 
-                        x='week_label', 
-                        y='amount', 
-                        color='category',
-                        markers=True,
-                        title=f'Weekly Expenses by Category - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
-                        labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
-                        category_orders={'week_label': week_labels}  # Enforce order of week labels
+                    # Calculate percentages
+                    total = category_totals['amount'].sum()
+                    category_totals['percentage'] = (category_totals['amount'] / total * 100).round(1)
+                    
+                    # Create horizontal bar chart for better category name visibility
+                    fig_category = px.bar(
+                        category_totals, 
+                        x='amount', 
+                        y='category',
+                        orientation='h',
+                        title=f'Spending by Category - {selected_month if selected_month != "All" else "All Months"} {selected_year if selected_year != "All" else "All Years"}',
+                        labels={'amount': 'Amount (₹)', 'category': 'Category'},
+                        text='amount'
                     )
                     
                     # Customize the theme to match dark mode and improve mobile responsiveness
-                    fig_weekly.update_layout(
+                    fig_category.update_layout(
                         template='plotly_dark',
                         plot_bgcolor='rgba(0,0,0,0)',
                         paper_bgcolor='rgba(0,0,0,0)',
-                        legend=dict(orientation='h', yanchor='bottom', y=-0.3, xanchor='center', x=0.5),
                         margin=dict(l=20, r=20, t=40, b=20),
-                        height=500,
-                        # Improve responsiveness
+                        height=max(400, len(category_totals) * 30),  # Dynamic height based on number of categories
+                        yaxis={'categoryorder': 'total ascending'},  # Sort categories by value
                         autosize=True,
                     )
                     
-                    # Make the chart more mobile-friendly with bigger dots and thinner lines
-                    fig_weekly.update_traces(
-                        line=dict(width=1),  # Thinner lines
-                        marker=dict(size=12)  # Bigger dots
+                    # Format text on bars
+                    fig_category.update_traces(
+                        texttemplate='₹%{text:,.0f}',
+                        textposition='outside'
                     )
                     
-                    st.plotly_chart(fig_weekly, use_container_width=True)
+                    st.plotly_chart(fig_category, use_container_width=True)
+                    
+                    # Show detailed table
+                    st.subheader("📋 Category Details")
+                    
+                    # Format the table for better display
+                    display_df = category_totals.copy()
+                    display_df['amount'] = display_df['amount'].apply(lambda x: f"₹{x:,.2f}")
+                    display_df['percentage'] = display_df['percentage'].apply(lambda x: f"{x}%")
+                    display_df.columns = ['Category', 'Amount', 'Percentage']
+                    display_df.index = range(1, len(display_df) + 1)
+                    
+                    st.dataframe(display_df, use_container_width=True)
                 else:
                     st.info(f"No expense data available for the selected filters")
-                
+            
             with trend_tabs[1]:
+                # ENHANCED: Toggle between weekly and monthly trends
+                st.subheader("📈 Trends Over Time")
+                
+                # Add toggle for weekly vs monthly view
+                view_type = st.radio(
+                    "Select View",
+                    options=["Weekly", "Monthly"],
+                    horizontal=True,
+                    help="Weekly view shows weeks within selected month. Monthly view shows months within selected year."
+                )
+                
+                if view_type == "Weekly":
+                    # Weekly view (existing functionality with some modifications)
+                    if selected_month == "All":
+                        st.info("Please select a specific month to view weekly trends")
+                    else:
+                        # Filter to selected month and year
+                        if selected_year != "All":
+                            monthly_df = filtered_df[(filtered_df['month'] == list(calendar.month_name).index(selected_month)) & 
+                                                   (filtered_df['year'] == selected_year)]
+                        else:
+                            monthly_df = filtered_df[filtered_df['month'] == list(calendar.month_name).index(selected_month)]
+                        
+                        if not monthly_df.empty:
+                            # Create day-of-month based week aggregation
+                            weekly_category = monthly_df.groupby(['year', 'month', 'day_week', 'category'])['amount'].sum().reset_index()
+                            
+                            # Create week labels showing the day range in the month
+                            weekly_category['week_label'] = weekly_category.apply(
+                                lambda x: f"{x['day_week']} {calendar.month_name[x['month']][:3]} {x['year']}", axis=1
+                            )
+                            
+                            # Create a sort key based on year, month, and day range
+                            weekly_category['sort_key'] = weekly_category.apply(
+                                lambda x: f"{x['year']:04d}{x['month']:02d}{int(x['day_week'].split('-')[0]):02d}", axis=1
+                            )
+                            
+                            # Sort by the combined key for proper chronological order
+                            weekly_category = weekly_category.sort_values('sort_key')
+                            
+                            # Create the line chart
+                            week_labels = weekly_category['week_label'].unique()
+                            
+                            fig_weekly = px.line(
+                                weekly_category, 
+                                x='week_label', 
+                                y='amount', 
+                                color='category',
+                                markers=True,
+                                title=f'Weekly Expenses by Category - {selected_month} {selected_year if selected_year != "All" else "All Years"}',
+                                labels={'amount': 'Amount (₹)', 'week_label': 'Week', 'category': 'Category'},
+                                category_orders={'week_label': week_labels}
+                            )
+                            
+                            # Customize the theme
+                            fig_weekly.update_layout(
+                                template='plotly_dark',
+                                plot_bgcolor='rgba(0,0,0,0)',
+                                paper_bgcolor='rgba(0,0,0,0)',
+                                legend=dict(orientation='h', yanchor='bottom', y=-0.3, xanchor='center', x=0.5),
+                                margin=dict(l=20, r=20, t=40, b=20),
+                                height=500,
+                                autosize=True,
+                            )
+                            
+                            fig_weekly.update_traces(
+                                line=dict(width=1),
+                                marker=dict(size=12)
+                            )
+                            
+                            st.plotly_chart(fig_weekly, use_container_width=True)
+                        else:
+                            st.info(f"No expense data available for {selected_month} {selected_year if selected_year != 'All' else ''}")
+                
+                else:  # Monthly view
+                    # Monthly trends - show monthly aggregation
+                    if selected_year != "All":
+                        yearly_df = filtered_df[filtered_df['year'] == selected_year]
+                        title_suffix = f" - {selected_year}"
+                    else:
+                        yearly_df = filtered_df
+                        title_suffix = " - All Years"
+                    
+                    if not yearly_df.empty:
+                        # Create monthly aggregation by category
+                        monthly_category = yearly_df.groupby(['year', 'month', 'month_name', 'category'])['amount'].sum().reset_index()
+                        
+                        # Create month labels
+                        monthly_category['month_label'] = monthly_category.apply(
+                            lambda x: f"{x['month_name'][:3]} {x['year']}", axis=1
+                        )
+                        
+                        # Sort by year and month
+                        monthly_category['sort_key'] = monthly_category.apply(
+                            lambda x: f"{x['year']:04d}{x['month']:02d}", axis=1
+                        )
+                        monthly_category = monthly_category.sort_values('sort_key')
+                        
+                        # Create the line chart
+                        month_labels = monthly_category['month_label'].unique()
+                        
+                        fig_monthly = px.line(
+                            monthly_category, 
+                            x='month_label', 
+                            y='amount', 
+                            color='category',
+                            markers=True,
+                            title=f'Monthly Expenses by Category{title_suffix}',
+                            labels={'amount': 'Amount (₹)', 'month_label': 'Month', 'category': 'Category'},
+                            category_orders={'month_label': month_labels}
+                        )
+                        
+                        # Customize the theme
+                        fig_monthly.update_layout(
+                            template='plotly_dark',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            legend=dict(orientation='h', yanchor='bottom', y=-0.3, xanchor='center', x=0.5),
+                            margin=dict(l=20, r=20, t=40, b=20),
+                            height=500,
+                            autosize=True,
+                        )
+                        
+                        fig_monthly.update_traces(
+                            line=dict(width=1),
+                            marker=dict(size=12)
+                        )
+                        
+                        st.plotly_chart(fig_monthly, use_container_width=True)
+                    else:
+                        st.info(f"No expense data available for the selected filters")
+                
+            with trend_tabs[2]:
                 # 3. Donut chart of spend distribution by payment methods
                 if not filtered_df.empty:
                     payment_totals = filtered_df.groupby('paymentMethod')['amount'].sum().reset_index()
@@ -396,7 +547,7 @@ def show_analytics():
                 else:
                     st.info(f"No expense data available for the selected filters")
             
-            with trend_tabs[2]:
+            with trend_tabs[3]:
                 # 4. NEW: Pie chart of expense themes
                 if not filtered_df.empty:
                     # Aggregate expenses by theme
